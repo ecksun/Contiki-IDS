@@ -205,7 +205,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
   set_global_address();
 
-  PRINTF("UDP client process started\n");
+  PRINTF("UDP evil client process started\n");
 
   print_local_addresses();
 

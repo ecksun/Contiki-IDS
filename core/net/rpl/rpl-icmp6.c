@@ -407,6 +407,8 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   unsigned char *buffer;
   int pos;
   rpl_dag_t *dag = instance->current_dag;
+  dag->rank = ROOT_RANK(instance);
+  PRINTF("Advertising rank %u\n", dag->rank);
 #if !RPL_LEAF_ONLY
   uip_ipaddr_t addr;
 #endif /* !RPL_LEAF_ONLY */

@@ -92,7 +92,7 @@ new_dio_interval(rpl_instance_t *instance)
 
   /* random number between I/2 and I */
   time = time >> 1;
-  time += (time * random_rand()) / RANDOM_RAND_MAX;
+  // time += (time * random_rand()) / RANDOM_RAND_MAX;
 
   /*
    * The intervals must be equally long among the nodes for Trickle to

@@ -48,7 +48,7 @@
 #include "net/uip-ds6.h"
 #include "net/uip-packetqueue.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_ANNOTATE
 #include "net/uip-debug.h"
 
 #ifdef UIP_CONF_DS6_NEIGHBOR_STATE_CHANGED
@@ -798,6 +798,20 @@ uip_ds6_route_add(uip_ipaddr_t *ipaddr, uint8_t length, uip_ipaddr_t *nexthop,
     memset(&locroute->state, 0, sizeof(UIP_DS6_ROUTE_STATE_TYPE));
 #endif
 
+    
+    printf("Routing table:\n");
+    uip_ds6_route_t * tmp_route;
+    for(tmp_route = uip_ds6_routing_table;
+        tmp_route < uip_ds6_routing_table + UIP_DS6_ROUTE_NB; tmp_route++) {
+      if (tmp_route->isused == 0)
+        continue;
+      printf("source: ");
+      uip_debug_ipaddr_print(& tmp_route->ipaddr);
+      printf("\nlength: %d\n", tmp_route->length);
+      printf("metric: %d\nnexthop:", tmp_route->metric);
+      uip_debug_ipaddr_print(& tmp_route->nexthop);
+      printf("\n---\n");
+    }
     PRINTF("DS6: adding route: ");
     PRINT6ADDR(ipaddr);
     PRINTF(" via ");

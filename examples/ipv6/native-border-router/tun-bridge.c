@@ -131,7 +131,7 @@ ifconf(const char *tundev, const char *ipaddr)
   ssystem("ifconfig %s inet6 %s up", tundev, ipaddr);
   ssystem("sysctl -w net.inet.ip.forwarding=1");
 #else
-  ssystem("ifconfig %s inet `hostname` %s up", tundev, ipaddr);
+  ssystem("ifconfig %s inet6 `hostname` %s up", tundev, ipaddr);
   ssystem("sysctl -w net.inet.ip.forwarding=1");
 #endif /* !linux */
 

@@ -707,11 +707,11 @@ public class Simulation extends Observable implements Runnable {
         /* Create mote using mote type */
         Mote mote = moteType.generateMote(this);
         if (mote.setConfigXML(this, element.getChildren(), visAvailable)) {
-        	if (getMoteWithID(mote.getID()) != null) {
-        		logger.warn("Ignoring duplicate mote ID: " + mote.getID());
-        	} else {
+//        	if (getMoteWithID(mote.getID()) != null) {
+//        		logger.warn("Ignoring duplicate mote ID: " + mote.getID());
+//        	} else {
         		addMote(mote);
-        	}
+//        	}
         } else {
           logger.fatal("Mote was not created: " + element.getText().trim());
           throw new Exception("All motes were not recreated");

@@ -53,11 +53,26 @@
 #include "net/uip-debug.h"
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+#define UIP_UDP_BUF          ((struct uip_udp_hdr *)&uip_buf[UIP_LLIPH_LEN])
+#define UIP_ICMP_BUF            ((struct uip_icmp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
+#define PING6_DATALEN 16
 
 #define UDP_CLIENT_PORT 8775
 #define UDP_SERVER_PORT 5688
 
+#define CONTROL_CHAN_CLIENT_PORT 4712
+#define CONTROL_CHAN_SERVER_PORT 4711
+
+struct ids_host_info {
+  uip_ipaddr_t addr;
+  int8_t outstanding_echos;
+};
+
 static struct uip_udp_conn *server_conn;
+static struct uip_udp_conn *control_conn;
+static struct ids_host_info host[47];
+static int hosts = 0;
+static uint8_t count = 0;
 
 PROCESS(udp_server_process, "UDP server process");
 AUTOSTART_PROCESSES(&udp_server_process,&collect_common_process);
@@ -89,7 +104,101 @@ collect_common_net_init(void)
 #endif
   serial_line_init();
 
-  PRINTF("I am sink!\n");
+  PRINTF("I the DETECTING sink! Compile time: %s\n", __TIME__);
+}
+
+void add_ip(uip_ipaddr_t * addr) {
+  int i;
+  for (i = 0; i < hosts; ++i) {
+    if (uip_ipaddr_cmp(addr, &host[i].addr))
+      return;
+  }
+  memcpy(&host[hosts++].addr, addr, sizeof(*addr));
+  printf("Adding new IP: ");
+  uip_debug_ipaddr_print(addr);
+  printf("\n");
+}
+
+void del_ip(uip_ipaddr_t * addr) {
+  int i, found;
+  for (i = 0, found = 0; i < hosts; ++i) {
+    if (uip_ipaddr_cmp(addr, &host[i].addr)) found = 1;
+    if (found) {
+      host[i] = host[i+1];
+    }
+  }
+  if (!found)
+    return;
+  printf("Removed ip: ");
+  uip_debug_ipaddr_print(addr);
+  printf("\n");
+
+  if (hosts > 0)
+    --hosts;
+}
+
+/**
+ * Find the ids info corresponding to the IP provided
+ * @return The info if found, NULL otherwise
+ */
+struct ids_host_info * find_info(uip_ipaddr_t * addr) {
+  int i;
+  for (i = 0; i < hosts; ++i) {
+    if (uip_ipaddr_cmp(addr, &host[i].addr)) {
+      return &host[i];
+    }
+  }
+  return NULL;
+}
+
+void send_ping(uip_ipaddr_t * dest_addr)
+{
+  struct ids_host_info * ids_info;
+  UIP_IP_BUF->vtc = 0x60;
+  UIP_IP_BUF->tcflow = 1;
+  UIP_IP_BUF->flow = 0;
+  UIP_IP_BUF->proto = UIP_PROTO_ICMP6;
+  UIP_IP_BUF->ttl = uip_ds6_if.cur_hop_limit;
+  uip_ipaddr_copy(&UIP_IP_BUF->destipaddr, dest_addr);
+  uip_ds6_select_src(&UIP_IP_BUF->srcipaddr, &UIP_IP_BUF->destipaddr);
+
+  UIP_ICMP_BUF->type = ICMP6_ECHO_REQUEST;
+  UIP_ICMP_BUF->icode = 0;
+  /* set identifier and sequence number to 0 */
+  memset((uint8_t *)UIP_ICMP_BUF + UIP_ICMPH_LEN, 0, 4);
+  /* put one byte of data */
+  memset((uint8_t *)UIP_ICMP_BUF + UIP_ICMPH_LEN + UIP_ICMP6_ECHO_REQUEST_LEN,
+      count, PING6_DATALEN);
+
+
+  uip_len = UIP_ICMPH_LEN + UIP_ICMP6_ECHO_REQUEST_LEN + UIP_IPH_LEN + PING6_DATALEN;
+  UIP_IP_BUF->len[0] = (uint8_t)((uip_len - 40) >> 8);
+  UIP_IP_BUF->len[1] = (uint8_t)((uip_len - 40) & 0x00FF);
+
+  UIP_ICMP_BUF->icmpchksum = 0;
+  UIP_ICMP_BUF->icmpchksum = ~uip_icmp6chksum();
+
+
+  PRINTF("Sending Echo Request to ");
+  PRINT6ADDR(&UIP_IP_BUF->destipaddr);
+  PRINTF(" from ");
+  PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+  PRINTF("\n");
+  UIP_STAT(++uip_stat.icmp.sent);
+
+  ids_info = find_info(dest_addr);
+  if (ids_info == NULL) {
+    printf("No request sent for this packet from ");
+    uip_debug_ipaddr_print(dest_addr);
+    printf("\n");
+  }
+  else {
+    ids_info->outstanding_echos++;
+  }
+
+  tcpip_ipv6_output();
+
+  count++;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -99,17 +208,74 @@ tcpip_handler(void)
   rimeaddr_t sender;
   uint8_t seqno;
   uint8_t hops;
+  int i;
+  int len;
+  uip_ipaddr_t ip_recieved;
 
-  if(uip_newdata()) {
+  if (uip_newdata()) {
+
     appdata = (uint8_t *)uip_appdata;
     sender.u8[0] = UIP_IP_BUF->srcipaddr.u8[15];
     sender.u8[1] = UIP_IP_BUF->srcipaddr.u8[14];
     seqno = *appdata;
     hops = uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;
+
+    if (UIP_HTONS(UIP_UDP_BUF->destport) == CONTROL_CHAN_SERVER_PORT) {
+      printf("Got a message on the control channel!\n");
+      // appdata += 2;
+      len = uip_datalen();
+
+      switch (appdata[0]) {
+        case 'a': // add
+        case 'r': // remove
+        case 'p': // ping
+          for (i = 1; i < len; ++i) {
+            ip_recieved.u8[i-1] = appdata[i];
+          } 
+          break;
+        case 'l': // list
+          printf("Listing IP addresses (%d)\n", hosts);
+          for (i = 0; i < hosts; ++i) {
+            printf("%2d: ", i);
+            uip_debug_ipaddr_print(&host[i].addr);
+            printf(" %-9d", host[i].outstanding_echos);
+            printf("\n");
+          }
+      }
+
+      switch (appdata[0]) {
+        case 'a':
+          add_ip(&ip_recieved);
+          break;
+        case 'r':
+          del_ip(&ip_recieved);
+          break;
+        case 'p':
+          send_ping(&ip_recieved);
+        break;
+      }
+
+      return;
+    }
+
     collect_common_recv(&sender, seqno, hops,
                         appdata + 2, uip_datalen() - 2);
+
   }
 }
+
+void handle_reply(void) {
+  struct ids_host_info * ids_info = find_info(&UIP_IP_BUF->srcipaddr);
+  if (ids_info == NULL) {
+    printf("Sending to host that doesnt exist, this shouldnt happen\n");
+    add_ip(&UIP_IP_BUF->srcipaddr);
+  }
+  else {
+    ids_info->outstanding_echos--;
+  }
+}
+
+
 /*---------------------------------------------------------------------------*/
 static void
 print_local_addresses(void)
@@ -141,6 +307,8 @@ PROCESS_THREAD(udp_server_process, ev, data)
   PROCESS_PAUSE();
 
   SENSORS_ACTIVATE(button_sensor);
+
+  memset(host, 0, sizeof(host));
 
   PRINTF("UDP server started\n");
 
@@ -174,6 +342,11 @@ PROCESS_THREAD(udp_server_process, ev, data)
   PRINTF(" local/remote port %u/%u\n", UIP_HTONS(server_conn->lport),
          UIP_HTONS(server_conn->rport));
 
+  control_conn = udp_new(NULL, 0, NULL);
+  udp_bind(control_conn, UIP_HTONS(CONTROL_CHAN_SERVER_PORT));
+
+  icmp6_new(NULL);
+
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
@@ -181,6 +354,9 @@ PROCESS_THREAD(udp_server_process, ev, data)
     } else if (ev == sensors_event && data == &button_sensor) {
       PRINTF("Initiaing global repair\n");
       rpl_repair_root(RPL_DEFAULT_INSTANCE);
+    }
+    if(ev == tcpip_icmp6_event && *(uint8_t *)data == ICMP6_ECHO_REPLY) {
+      handle_reply();
     }
   }
 

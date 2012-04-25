@@ -8,7 +8,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
     <title>Wormhole attack</title>
-    <delaytime>0</delaytime>
+    <delaytime>-2147483648</delaytime>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -1293,36 +1293,18 @@
     </mote>
   </simulation>
   <plugin>
-    se.sics.cooja.plugins.SimControl
-    <width>318</width>
-    <z>2</z>
-    <height>192</height>
-    <location_x>0</location_x>
-    <location_y>0</location_y>
-  </plugin>
-  <plugin>
     se.sics.cooja.plugins.Visualizer
     <plugin_config>
       <skin>se.sics.cooja.plugins.skins.IDVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>4.941172777824199 0.0 0.0 4.941172777824199 341.6012088472026 65.86109004982018</viewport>
+      <viewport>9.908489326959637 0.0 0.0 9.908489326959637 544.1315246195226 132.57329697821075</viewport>
+      <hidden />
     </plugin_config>
-    <width>1099</width>
+    <width>1910</width>
     <z>0</z>
-    <height>624</height>
-    <location_x>794</location_x>
+    <height>1147</height>
+    <location_x>0</location_x>
     <location_y>0</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.LogListener
-    <plugin_config>
-      <filter />
-    </plugin_config>
-    <width>1366</width>
-    <z>1</z>
-    <height>150</height>
-    <location_x>527</location_x>
-    <location_y>794</location_y>
   </plugin>
 </simconf>
 

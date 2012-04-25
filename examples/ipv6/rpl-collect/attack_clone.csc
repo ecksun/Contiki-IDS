@@ -484,58 +484,20 @@
     </mote>
   </simulation>
   <plugin>
-    se.sics.cooja.plugins.SimControl
-    <width>259</width>
-    <z>2</z>
-    <height>184</height>
-    <location_x>1255</location_x>
-    <location_y>964</location_y>
-  </plugin>
-  <plugin>
     se.sics.cooja.plugins.Visualizer
     <plugin_config>
       <skin>se.sics.cooja.plugins.skins.IDVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.AttributeVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>2.1105590607584443 0.0 0.0 2.1105590607584443 -156.8797182949606 207.79210066441811</viewport>
+      <viewport>5.297363470380465 0.0 0.0 5.297363470380465 -267.0159816807287 522.2993784888375</viewport>
+      <hidden />
     </plugin_config>
-    <width>666</width>
+    <width>1910</width>
     <z>0</z>
-    <height>510</height>
-    <location_x>1254</location_x>
-    <location_y>1</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.LogListener
-    <plugin_config>
-      <filter>ID:26</filter>
-    </plugin_config>
-    <width>1242</width>
-    <z>3</z>
-    <height>1157</height>
-    <location_x>11</location_x>
-    <location_y>-7</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.collectview.CollectView
-    <mote_arg>0</mote_arg>
-    <width>357</width>
-    <z>4</z>
-    <height>117</height>
-    <location_x>1382</location_x>
-    <location_y>673</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.LogListener
-    <plugin_config>
-      <filter />
-    </plugin_config>
-    <width>665</width>
-    <z>1</z>
-    <height>494</height>
-    <location_x>1255</location_x>
-    <location_y>513</location_y>
+    <height>1147</height>
+    <location_x>0</location_x>
+    <location_y>0</location_y>
   </plugin>
 </simconf>
 

@@ -7,7 +7,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/collect-view</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
-    <title>Collect tree dense noloss</title>
+    <title>Sinkhole attack with selective forwarding</title>
     <delaytime>-2147483648</delaytime>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
@@ -474,7 +474,7 @@
       <hidden />
     </plugin_config>
     <width>1322</width>
-    <z>2</z>
+    <z>0</z>
     <height>1154</height>
     <location_x>595</location_x>
     <location_y>0</location_y>
@@ -486,10 +486,10 @@
       <hidedebug />
     </plugin_config>
     <width>593</width>
-    <z>1</z>
+    <z>2</z>
     <height>612</height>
-    <location_x>0</location_x>
-    <location_y>0</location_y>
+    <location_x>-2</location_x>
+    <location_y>3</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.collectview.CollectView
@@ -507,7 +507,7 @@
       <hidedebug />
     </plugin_config>
     <width>593</width>
-    <z>0</z>
+    <z>1</z>
     <height>541</height>
     <location_x>0</location_x>
     <location_y>610</location_y>

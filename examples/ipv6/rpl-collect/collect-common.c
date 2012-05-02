@@ -78,7 +78,7 @@ void
 collect_common_recv(const rimeaddr_t *originator, uint8_t seqno, uint8_t hops,
                     uint8_t *payload, uint16_t payload_len)
 {
-  printf("Got packet from node %d\n", originator->u8[0]);
+  printf("Got collect packet from node %d\n", originator->u8[0]);
   leds_blink();
 }
 /*---------------------------------------------------------------------------*/

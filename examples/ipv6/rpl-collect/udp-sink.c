@@ -57,11 +57,15 @@
 #define UIP_ICMP_BUF            ((struct uip_icmp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 #define PING6_DATALEN 16
 
+#define PING_TIMEOUT 20 * CLOCK_SECOND
+
 #define UDP_CLIENT_PORT 8775
 #define UDP_SERVER_PORT 5688
 
 #define CONTROL_CHAN_CLIENT_PORT 4712
 #define CONTROL_CHAN_SERVER_PORT 4711
+
+extern uip_ds6_route_t uip_ds6_routing_table[];
 
 struct ids_host_info {
   uip_ipaddr_t addr;
@@ -73,6 +77,7 @@ static struct uip_udp_conn *control_conn;
 static struct ids_host_info host[47];
 static int hosts = 0;
 static uint8_t count = 0;
+static int current_ping = 0;
 
 PROCESS(udp_server_process, "UDP server process");
 AUTOSTART_PROCESSES(&udp_server_process,&collect_common_process);
@@ -179,11 +184,11 @@ void send_ping(uip_ipaddr_t * dest_addr)
   UIP_ICMP_BUF->icmpchksum = ~uip_icmp6chksum();
 
 
-  PRINTF("Sending Echo Request to ");
-  PRINT6ADDR(&UIP_IP_BUF->destipaddr);
-  PRINTF(" from ");
-  PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
-  PRINTF("\n");
+  // PRINTF("Sending Echo Request to ");
+  // PRINT6ADDR(&UIP_IP_BUF->destipaddr);
+  // PRINTF(" from ");
+  // PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+  // PRINTF("\n");
   UIP_STAT(++uip_stat.icmp.sent);
 
   ids_info = find_info(dest_addr);
@@ -199,6 +204,19 @@ void send_ping(uip_ipaddr_t * dest_addr)
   tcpip_ipv6_output();
 
   count++;
+}
+
+void ping_all() {
+  for (; current_ping < UIP_DS6_ROUTE_NB && !uip_ds6_routing_table[current_ping].isused; ++current_ping);
+  if (!uip_ds6_routing_table[current_ping].isused)
+    return;
+
+  add_ip(&uip_ds6_routing_table[current_ping].ipaddr);
+  send_ping(&uip_ds6_routing_table[current_ping].ipaddr);
+  current_ping++;
+  if (current_ping >= UIP_DS6_ROUTE_NB-1) {
+    current_ping = 0;
+  }
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -271,6 +289,9 @@ void handle_reply(void) {
     add_ip(&UIP_IP_BUF->srcipaddr);
   }
   else {
+    // printf("Got pong from ");
+    // uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
+    // printf("\n");
     ids_info->outstanding_echos--;
   }
 }
@@ -301,6 +322,8 @@ PROCESS_THREAD(udp_server_process, ev, data)
 {
   uip_ipaddr_t ipaddr;
   struct uip_ds6_addr *root_if;
+  static struct etimer ping_timer;
+  static int i;
 
   PROCESS_BEGIN();
 
@@ -346,6 +369,7 @@ PROCESS_THREAD(udp_server_process, ev, data)
   udp_bind(control_conn, UIP_HTONS(CONTROL_CHAN_SERVER_PORT));
 
   icmp6_new(NULL);
+  etimer_set(&ping_timer, PING_TIMEOUT);
 
   while(1) {
     PROCESS_YIELD();
@@ -355,8 +379,24 @@ PROCESS_THREAD(udp_server_process, ev, data)
       PRINTF("Initiaing global repair\n");
       rpl_repair_root(RPL_DEFAULT_INSTANCE);
     }
-    if(ev == tcpip_icmp6_event && *(uint8_t *)data == ICMP6_ECHO_REPLY) {
+    else if(ev == tcpip_icmp6_event && *(uint8_t *)data == ICMP6_ECHO_REPLY) {
       handle_reply();
+    }
+    else if (etimer_expired(&ping_timer)){
+      if (current_ping == 0) { // The timer just expired
+        // Check to make sure all are online
+        for (i = 0; i < hosts; ++i) {
+          if (host[i].outstanding_echos != 0) {
+            uip_debug_ipaddr_print(&host[i].addr);
+            printf(" has not responded to ping\n");
+            host[i].outstanding_echos = 0;
+          }
+        }
+      }
+      ping_all();
+      if (current_ping == 0) { // We are done pinging all neighbors
+        etimer_reset(&ping_timer);
+      }
     }
   }
 

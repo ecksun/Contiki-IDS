@@ -28,6 +28,7 @@
  */
 
 #include "contiki.h"
+#include "contiki-net.h"
 #include "net/uip.h"
 #include "net/uip-ds6.h"
 #include "net/uip-udp-packet.h"
@@ -47,6 +48,8 @@
 
 #define UDP_CLIENT_PORT 8775
 #define UDP_SERVER_PORT 5688
+
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 
 #define DEBUG DEBUG_PRINT
 #include "net/uip-debug.h"
@@ -92,6 +95,9 @@ static void
 tcpip_handler(void)
 {
   if(uip_newdata()) {
+    printf("Ignoring data from ");
+    uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
+    printf("\n");
     /* Ignore incoming data */
   }
 }
@@ -170,6 +176,8 @@ collect_common_net_init(void)
   uart1_set_input(serial_line_input_byte);
 #endif
   serial_line_init();
+
+  PRINTF("Compile time: %s\n", __TIME__);
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -206,6 +214,13 @@ set_global_address(void)
   uip_ip6addr(&server_ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
 
 }
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+void handle_reply(void) {
+  printf("Got ping from ");
+  uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
+  printf("\n");
+}
+
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
@@ -228,10 +243,15 @@ PROCESS_THREAD(udp_client_process, ev, data)
   PRINTF(" local/remote port %u/%u\n",
         UIP_HTONS(client_conn->lport), UIP_HTONS(client_conn->rport));
 
+  icmp6_new(NULL);
+
   while(1) {
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       tcpip_handler();
+    }
+    else if(ev == tcpip_icmp6_event && *(uint8_t *)data == ICMP6_ECHO_REQUEST) {
+      handle_reply();
     }
   }
 

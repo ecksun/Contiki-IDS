@@ -35,169 +35,60 @@
 #include "net/neighbor-info.h"
 #include "net/rpl/rpl.h"
 #include "dev/serial-line.h"
-#if CONTIKI_TARGET_Z1
-#include "dev/uart0.h"
-#else
-#include "dev/uart1.h"
-#endif
-#include "collect-common.h"
-#include "collect-view.h"
+
+#include "ids-central.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#define UDP_CLIENT_PORT 8775
-#define UDP_SERVER_PORT 5688
-
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-
 #define DEBUG DEBUG_PRINT
 #include "net/uip-debug.h"
 
-static struct uip_udp_conn *client_conn;
+static struct uip_udp_conn *mapper_conn;
 static uip_ipaddr_t server_ipaddr;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client process");
-AUTOSTART_PROCESSES(&udp_client_process, &collect_common_process);
-/*---------------------------------------------------------------------------*/
-void
-collect_common_set_sink(void)
-{
-  /* A udp client can never become sink */
-}
+AUTOSTART_PROCESSES(&udp_client_process);
 /*---------------------------------------------------------------------------*/
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
 
-void
-collect_common_net_print(void)
-{
-  rpl_dag_t *dag;
-  int i;
-  /* Let's suppose we have only one instance */
-  dag = rpl_get_any_dag();
-  if(dag->preferred_parent != NULL) {
-    PRINTF("Preferred parent: ");
-    PRINT6ADDR(&dag->preferred_parent->addr);
-    PRINTF("\n");
-  }
-  PRINTF("Route entries:\n");
-  for(i = 0; i < UIP_DS6_ROUTE_NB; i++) {
-    if(uip_ds6_routing_table[i].isused) {
-      PRINT6ADDR(&uip_ds6_routing_table[i].ipaddr);
-      PRINTF("\n");
-    }
-  }
-  PRINTF("---\n");
-}
 /*---------------------------------------------------------------------------*/
 static void
 tcpip_handler(void)
 {
+  static int i, j;
+  printf("tcpip_handler()\n");
   if(uip_newdata()) {
-    printf("Ignoring data from ");
+    // TODO Check that this is the right port (and perhaps proto?)
+    uint8_t instance_id;
+    uip_ipaddr_t dag_id;
     uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
     printf("\n");
+    unsigned char * in_data = uip_appdata;
+    memcpy(&instance_id, in_data, sizeof(instance_id));
+    in_data += sizeof(instance_id);
+    memcpy(&dag_id, in_data, sizeof(dag_id));
+
+    for (i = 0; i < RPL_MAX_INSTANCES; ++i) {
+      if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
+        for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
+          if (instance_table[i].dag_table[j].used && uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id)) {
+            uip_debug_ipaddr_print(&instance_table[i].dag_table[j].dag_id);
+
+            unsigned char out_data[sizeof(instance_id) + sizeof(dag_id) + sizeof(*instance_table[i].dag_table[j].preferred_parent)];
+            memcpy(out_data, in_data, sizeof(instance_id) + sizeof(dag_id));
+            memcpy(out_data + sizeof(instance_id) + sizeof(dag_id), instance_table[i].dag_table[j].preferred_parent, sizeof(*instance_table[i].dag_table[j].preferred_parent));
+
+            uip_udp_packet_sendto(mapper_conn, out_data, sizeof(out_data), &UIP_IP_BUF->srcipaddr, UIP_HTONS(MAPPER_SERVER_PORT)); 
+            break;
+          }
+        }
+        break;
+      }
+    }
+
     /* Ignore incoming data */
-  }
-}
-/*---------------------------------------------------------------------------*/
-void
-collect_common_send(void)
-{
-  static uint8_t seqno;
-  struct {
-    uint8_t seqno;
-    uint8_t for_alignment;
-    struct collect_view_data_msg msg;
-  } msg;
-  /* struct collect_neighbor *n; */
-  uint16_t parent_etx;
-  uint16_t rtmetric;
-  uint16_t num_neighbors;
-  uint16_t beacon_interval;
-  rpl_parent_t *preferred_parent;
-  rimeaddr_t parent;
-  rpl_dag_t *dag;
-
-  if(client_conn == NULL) {
-    /* Not setup yet */
-    return;
-  }
-  memset(&msg, 0, sizeof(msg));
-  seqno++;
-  if(seqno == 0) {
-    /* Wrap to 128 to identify restarts */
-    seqno = 128;
-  }
-  msg.seqno = seqno;
-
-  rimeaddr_copy(&parent, &rimeaddr_null);
-  parent_etx = 0;
-
-  /* Let's suppose we have only one instance */
-  dag = rpl_get_any_dag();
-  if(dag != NULL) {
-    preferred_parent = dag->preferred_parent;
-    if(preferred_parent != NULL) {
-      uip_ds6_nbr_t *nbr;
-      nbr = uip_ds6_nbr_lookup(&preferred_parent->addr);
-      if(nbr != NULL) {
-        /* Use parts of the IPv6 address as the parent address, in reversed byte order. */
-        parent.u8[RIMEADDR_SIZE - 1] = nbr->ipaddr.u8[sizeof(uip_ipaddr_t) - 2];
-        parent.u8[RIMEADDR_SIZE - 2] = nbr->ipaddr.u8[sizeof(uip_ipaddr_t) - 1];
-        parent_etx = neighbor_info_get_metric((rimeaddr_t *) &nbr->lladdr) / 2;
-      }
-    }
-    rtmetric = dag->rank;
-    beacon_interval = (uint16_t) ((2L << dag->instance->dio_intcurrent) / 1000);
-    num_neighbors = RPL_PARENT_COUNT(dag);
-  } else {
-    rtmetric = 0;
-    beacon_interval = 0;
-    num_neighbors = 0;
-  }
-
-  /* num_neighbors = collect_neighbor_list_num(&tc.neighbor_list); */
-  collect_view_construct_message(&msg.msg, &parent,
-                                 parent_etx, rtmetric,
-                                 num_neighbors, beacon_interval);
-
-  uip_udp_packet_sendto(client_conn, &msg, sizeof(msg),
-                        &server_ipaddr, UIP_HTONS(UDP_SERVER_PORT));
-}
-/*---------------------------------------------------------------------------*/
-void
-collect_common_net_init(void)
-{
-#if CONTIKI_TARGET_Z1
-  uart0_set_input(serial_line_input_byte);
-#else
-  uart1_set_input(serial_line_input_byte);
-#endif
-  serial_line_init();
-
-  PRINTF("Compile time: %s\n", __TIME__);
-}
-/*---------------------------------------------------------------------------*/
-static void
-print_local_addresses(void)
-{
-  int i;
-  uint8_t state;
-
-  PRINTF("Client IPv6 addresses: ");
-  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
-    state = uip_ds6_if.addr_list[i].state;
-    if(uip_ds6_if.addr_list[i].isused &&
-       (state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
-      PRINT6ADDR(&uip_ds6_if.addr_list[i].ipaddr);
-      PRINTF("\n");
-      /* hack to make address "final" */
-      if (state == ADDR_TENTATIVE) {
-        uip_ds6_if.addr_list[i].state = ADDR_PREFERRED;
-      }
-    }
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -214,7 +105,6 @@ set_global_address(void)
   uip_ip6addr(&server_ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
 
 }
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 void handle_reply(void) {
   printf("Got ping from ");
   uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
@@ -232,16 +122,13 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
   PRINTF("UDP client process started\n");
 
-  print_local_addresses();
-
-  /* new connection with remote host */
-  client_conn = udp_new(NULL, UIP_HTONS(UDP_SERVER_PORT), NULL);
-  udp_bind(client_conn, UIP_HTONS(UDP_CLIENT_PORT));
+  mapper_conn = udp_new(NULL, UIP_HTONS(MAPPER_SERVER_PORT), NULL);
+  udp_bind(mapper_conn, UIP_HTONS(MAPPER_CLIENT_PORT));
 
   PRINTF("Created a connection with the server ");
-  PRINT6ADDR(&client_conn->ripaddr);
+  PRINT6ADDR(&mapper_conn->ripaddr);
   PRINTF(" local/remote port %u/%u\n",
-        UIP_HTONS(client_conn->lport), UIP_HTONS(client_conn->rport));
+        UIP_HTONS(mapper_conn->lport), UIP_HTONS(mapper_conn->rport));
 
   icmp6_new(NULL);
 
@@ -252,6 +139,9 @@ PROCESS_THREAD(udp_client_process, ev, data)
     }
     else if(ev == tcpip_icmp6_event && *(uint8_t *)data == ICMP6_ECHO_REQUEST) {
       handle_reply();
+    }
+    else {
+      printf("Something happened\n");
     }
   }
 

@@ -208,8 +208,10 @@ void send_ping(uip_ipaddr_t * dest_addr)
 
 void ping_all() {
   for (; current_ping < UIP_DS6_ROUTE_NB && !uip_ds6_routing_table[current_ping].isused; ++current_ping);
-  if (!uip_ds6_routing_table[current_ping].isused)
+  if (!uip_ds6_routing_table[current_ping].isused) {
+    ++current_ping;
     return;
+  }
 
   add_ip(&uip_ds6_routing_table[current_ping].ipaddr);
   send_ping(&uip_ds6_routing_table[current_ping].ipaddr);
@@ -217,6 +219,10 @@ void ping_all() {
   if (current_ping >= UIP_DS6_ROUTE_NB-1) {
     current_ping = 0;
   }
+}
+
+void map_network() {
+
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -270,6 +276,9 @@ tcpip_handler(void)
           break;
         case 'p':
           send_ping(&ip_recieved);
+        break;
+        case 'm':
+          map_network();
         break;
       }
 

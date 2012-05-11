@@ -3,6 +3,8 @@
 
 #include "ids-common.h"
 
+#define NETWORK_NODES 8
+
 extern uip_ds6_route_t uip_ds6_routing_table[];
 extern rpl_instance_t instance_table[];
 
@@ -11,8 +13,7 @@ struct ids_host_info {
   int8_t outstanding_echos;
 };
 
-struct ids_host_info host[47];
+struct ids_host_info host[NETWORK_NODES];
 int hosts = 0;
-
 
 #endif

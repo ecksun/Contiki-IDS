@@ -53,7 +53,6 @@ AUTOSTART_PROCESSES(&udp_client_process);
 /*---------------------------------------------------------------------------*/
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
 
-/*---------------------------------------------------------------------------*/
 static void
 tcpip_handler(void)
 {
@@ -74,13 +73,32 @@ tcpip_handler(void)
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
         for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
           if (instance_table[i].dag_table[j].used && uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id)) {
-            uip_debug_ipaddr_print(&instance_table[i].dag_table[j].dag_id);
+            // uip_debug_ipaddr_print(&instance_table[i].dag_table[j].dag_id);
+            // printf("\n");
 
+            // My IP address | RPL Instance ID | DAG ID | Parent adress
             unsigned char out_data[sizeof(instance_id) + sizeof(dag_id) + sizeof(*instance_table[i].dag_table[j].preferred_parent)];
-            memcpy(out_data, in_data, sizeof(instance_id) + sizeof(dag_id));
-            memcpy(out_data + sizeof(instance_id) + sizeof(dag_id), instance_table[i].dag_table[j].preferred_parent, sizeof(*instance_table[i].dag_table[j].preferred_parent));
+            unsigned char * out_data_p = out_data;
+            uip_ipaddr_t * myip;
+            myip = &uip_ds6_get_link_local(ADDR_PREFERRED)->ipaddr;
+            if (myip == NULL) // We have no interface to use
+              return;
+            // My IP adress
+            memcpy(out_data_p, myip, sizeof(uip_ipaddr_t));
+            out_data_p += sizeof(uip_ipaddr_t);
+            // RPL Instance ID | DAG ID
+            memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id));
+            out_data_p += sizeof(instance_id) + sizeof(dag_id);
+            // preferred parent
+            printf("parent: ");
+            uip_debug_ipaddr_print(&instance_table[i].dag_table[j].preferred_parent->addr);
+            printf("\n");
+            memcpy(out_data_p,
+                &instance_table[i].dag_table[j].preferred_parent->addr,
+                sizeof(instance_table[i].dag_table[j].preferred_parent->addr));
+            out_data_p += sizeof(instance_table[i].dag_table[j].preferred_parent->addr);
 
-            uip_udp_packet_sendto(mapper_conn, out_data, sizeof(out_data), &UIP_IP_BUF->srcipaddr, UIP_HTONS(MAPPER_SERVER_PORT)); 
+            uip_udp_packet_sendto(mapper_conn, out_data, sizeof(out_data), &UIP_IP_BUF->srcipaddr, UIP_HTONS(MAPPER_SERVER_PORT));
             break;
           }
         }
@@ -91,6 +109,8 @@ tcpip_handler(void)
     /* Ignore incoming data */
   }
 }
+
+
 /*---------------------------------------------------------------------------*/
 static void
 set_global_address(void)
@@ -105,7 +125,9 @@ set_global_address(void)
   uip_ip6addr(&server_ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
 
 }
-void handle_reply(void) {
+
+
+static void handle_reply(void) {
   printf("Got ping from ");
   uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
   printf("\n");

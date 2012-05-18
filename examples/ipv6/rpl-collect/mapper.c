@@ -53,6 +53,12 @@ static int mapper_instance = 0;
 static int mapper_dag = 0;
 static struct etimer map_timer;
 
+// Should not be nescesary, blaming strange build system
+void collect_common_set_sink(void) {}
+void collect_common_net_print(void) {}
+void collect_common_send(void) {}
+void collect_common_net_init(void) {}
+
 PROCESS(ids_server, "IDS Server");
 AUTOSTART_PROCESSES(&ids_server);
 
@@ -225,6 +231,8 @@ PROCESS_THREAD(ids_server, ev, data)
   } else {
     PRINTF("failed to create a new RPL DAG\n");
   }
+#else
+#error "No router"
 #endif /* UIP_CONF_ROUTER */
 
   /* The data sink runs with a 100% duty cycle in order to ensure high

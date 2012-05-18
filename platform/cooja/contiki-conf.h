@@ -65,6 +65,8 @@
 #define NETSTACK_CONF_RADIO cooja_radio_driver
 #define UIP_CONF_IPV6 1
 #define UIP_CONF_IP_FORWARD           0
+#define UIP_CONF_ROUTER               1
+#define UIP_CONF_ND6_SEND_RA		0
 
 #else /* WITH_UIP6 */
 

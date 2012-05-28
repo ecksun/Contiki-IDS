@@ -74,8 +74,8 @@ struct ids_host_info {
 
 static struct uip_udp_conn *server_conn;
 static struct uip_udp_conn *control_conn;
-static struct ids_host_info host[47];
-static int hosts = 0;
+extern struct ids_host_info host[47];
+extern int hosts;
 static uint8_t count = 0;
 static int current_ping = 0;
 
@@ -221,9 +221,6 @@ void ping_all() {
   }
 }
 
-void map_network() {
-
-}
 /*---------------------------------------------------------------------------*/
 static void
 tcpip_handler(void)
@@ -276,9 +273,6 @@ tcpip_handler(void)
           break;
         case 'p':
           send_ping(&ip_recieved);
-        break;
-        case 'm':
-          map_network();
         break;
       }
 

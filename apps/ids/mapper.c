@@ -53,14 +53,8 @@ static int mapper_instance = 0;
 static int mapper_dag = 0;
 static struct etimer map_timer;
 
-// Should not be nescesary, blaming strange build system
-void collect_common_set_sink(void) {}
-void collect_common_net_print(void) {}
-void collect_common_send(void) {}
-void collect_common_net_init(void) {}
-
-PROCESS(ids_server, "IDS Server");
-AUTOSTART_PROCESSES(&ids_server);
+PROCESS(mapper, "IDS network mapper");
+AUTOSTART_PROCESSES(&mapper);
 
 struct Node {
   uip_ipaddr_t * id;
@@ -201,10 +195,8 @@ void map_network() {
 }
 
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(ids_server, ev, data)
+PROCESS_THREAD(mapper, ev, data)
 {
-  uip_ipaddr_t ipaddr;
-  struct uip_ds6_addr *root_if;
   static struct etimer timer;
 
   PROCESS_BEGIN();
@@ -215,29 +207,6 @@ PROCESS_THREAD(ids_server, ev, data)
   memset(network, 0, sizeof(network));
 
   PRINTF("IDS Server, compile time: %s\n", __TIME__);
-
-#if UIP_CONF_ROUTER
-  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
-
-  /* uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr); */
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_MANUAL);
-  root_if = uip_ds6_addr_lookup(&ipaddr);
-  if(root_if != NULL) {
-    rpl_dag_t *dag;
-    dag = rpl_set_root(RPL_DEFAULT_INSTANCE,(uip_ip6addr_t *)&ipaddr);
-    uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-    rpl_set_prefix(dag, &ipaddr, 64);
-    PRINTF("created a new RPL dag\n");
-  } else {
-    PRINTF("failed to create a new RPL DAG\n");
-  }
-#else
-#error "No router"
-#endif /* UIP_CONF_ROUTER */
-
-  /* The data sink runs with a 100% duty cycle in order to ensure high
-     packet reception rates. */
-  NETSTACK_RDC.off(1);
 
   ids_conn = udp_new(NULL, UIP_HTONS(MAPPER_CLIENT_PORT), NULL);
   udp_bind(ids_conn, UIP_HTONS(MAPPER_SERVER_PORT));

@@ -34,6 +34,8 @@ CFLAGS += -DHARD_CODED_ADDRESS=\"fdfd::10\"
 CFLAGS += -DUIP_CONF_BUFFER_SIZE=1280
 endif
 
+CFLAGS+= -DUIP_CONF_IPV6_RPL
+
 # linker optimizations
 SMALL=1
 
@@ -59,6 +61,8 @@ APPS += er-http-engine
 endif
 
 APPS += erbium
+
+APPS += ids
 
 # optional rules to get assembly
 #CUSTOM_RULE_C_TO_OBJECTDIR_O = 1

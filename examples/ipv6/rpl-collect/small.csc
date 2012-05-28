@@ -94,9 +94,9 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky4</identifier>
       <description>SkyMapper</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/rpl-collect/mapper.c</source>
-      <commands EXPORT="discard">make mapper.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/rpl-collect/mapper.sky</firmware>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/rpl-collect/network-mapper.c</source>
+      <commands EXPORT="discard">make network-mapper.sky TARGET=sky</commands>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/rpl-collect/network-mapper.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>

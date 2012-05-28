@@ -5,6 +5,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/avrora</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/serial_socket</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/collect-view</project>
+  <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
     <title>Small</title>
     <delaytime>-2147483648</delaytime>
@@ -89,20 +90,29 @@
       <moteinterface>se.sics.cooja.mspmote.interfaces.MspDebugOutput</moteinterface>
       <moteinterface>se.sics.cooja.mspmote.interfaces.SkyTemperature</moteinterface>
     </motetype>
-    <mote>
-      <breakpoints />
-      <interface_config>
-        se.sics.cooja.interfaces.Position
-        <x>242.83184008074136</x>
-        <y>-88.93434685786869</y>
-        <z>0.0</z>
-      </interface_config>
-      <interface_config>
-        se.sics.cooja.mspmote.interfaces.MspMoteID
-        <id>1</id>
-      </interface_config>
-      <motetype_identifier>sky1</motetype_identifier>
-    </mote>
+    <motetype>
+      se.sics.cooja.mspmote.SkyMoteType
+      <identifier>sky4</identifier>
+      <description>SkyMapper</description>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/rpl-collect/mapper.c</source>
+      <commands EXPORT="discard">make mapper.sky TARGET=sky</commands>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/rpl-collect/mapper.sky</firmware>
+      <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
+      <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
+      <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>
+      <moteinterface>se.sics.cooja.interfaces.Mote2MoteRelations</moteinterface>
+      <moteinterface>se.sics.cooja.interfaces.MoteAttributes</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.MspClock</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.MspMoteID</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyButton</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyFlash</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyCoffeeFilesystem</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyByteRadio</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.MspSerial</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyLED</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.MspDebugOutput</moteinterface>
+      <moteinterface>se.sics.cooja.mspmote.interfaces.SkyTemperature</moteinterface>
+    </motetype>
     <mote>
       <breakpoints />
       <interface_config>
@@ -187,11 +197,25 @@
       </interface_config>
       <motetype_identifier>sky2</motetype_identifier>
     </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>270.86168601492574</x>
+        <y>-104.2646281099618</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>8</id>
+      </interface_config>
+      <motetype_identifier>sky4</motetype_identifier>
+    </mote>
   </simulation>
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>259</width>
-    <z>1</z>
+    <z>3</z>
     <height>184</height>
     <location_x>1255</location_x>
     <location_y>964</location_y>
@@ -203,7 +227,7 @@
       <skin>se.sics.cooja.plugins.skins.AttributeVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>2.1105590607584443 0.0 0.0 2.1105590607584443 -156.8797182949606 207.79210066441811</viewport>
+      <viewport>2.5064385302171472 0.0 0.0 2.5064385302171472 -159.8981661873888 298.3328812335701</viewport>
     </plugin_config>
     <width>666</width>
     <z>2</z>
@@ -214,27 +238,18 @@
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter>ID:26</filter>
+      <filter>ID:8</filter>
     </plugin_config>
     <width>1242</width>
-    <z>3</z>
+    <z>1</z>
     <height>1157</height>
     <location_x>11</location_x>
     <location_y>-7</location_y>
   </plugin>
   <plugin>
-    se.sics.cooja.plugins.collectview.CollectView
-    <mote_arg>0</mote_arg>
-    <width>357</width>
-    <z>4</z>
-    <height>117</height>
-    <location_x>1382</location_x>
-    <location_y>673</location_y>
-  </plugin>
-  <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter />
+      <filter>ID:[1-7]</filter>
     </plugin_config>
     <width>665</width>
     <z>0</z>

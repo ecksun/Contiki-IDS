@@ -480,8 +480,6 @@ pushing_periodic_handler(resource_t *r)
 
   ++obs_counter;
 
-  PRINTF("TICK %u for /%s\n", obs_counter, r->url);
-
   /* Build notification. */
   coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
   coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );

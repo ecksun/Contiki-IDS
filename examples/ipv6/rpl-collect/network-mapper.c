@@ -51,11 +51,11 @@ void collect_common_net_print(void) {}
 void collect_common_send(void) {}
 void collect_common_net_init(void) {}
 
-PROCESS(ids_server_example, "IDS Server router");
-AUTOSTART_PROCESSES(&ids_server_example, &mapper);
+PROCESS(network_mapper, "IDS Server router");
+AUTOSTART_PROCESSES(&network_mapper, &mapper);
 
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(ids_server_example, ev, data)
+PROCESS_THREAD(network_mapper, ev, data)
 {
   uip_ipaddr_t ipaddr;
   struct uip_ds6_addr *root_if;

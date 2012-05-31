@@ -42,7 +42,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
 static struct uip_udp_conn *ids_conn;
@@ -59,7 +59,7 @@ AUTOSTART_PROCESSES(&mapper);
 struct Node {
   uip_ipaddr_t * id;
   struct Node * parent;
-  struct Node * children[NETWORK_NODES/4];
+  struct Node * children[NETWORK_NODES];
   int child;
 };
 
@@ -102,9 +102,9 @@ struct Node * add_node(uip_ipaddr_t * ip) {
   if (node != NULL)
     return node;
 
-  printf("Creating new node: ");
-  uip_debug_ipaddr_print(ip);
-  printf("\n");
+  PRINTF("Creating new node: ");
+  PRINT6ADDR(ip);
+  PRINTF("\n");
   network[node_index].id = ip;
   return &network[node_index++];
 }
@@ -138,14 +138,16 @@ void tcpip_handler() {
 
   appdata = (uint8_t *)uip_appdata;
   memcpy(&src_ip, appdata, sizeof(src_ip));
-  printf("Source IP: ");
-  uip_debug_ipaddr_print(&src_ip);
+  PRINTF("Source IP: ");
+  PRINT6ADDR(&src_ip);
   src_ip.u16[0] = 0xaaaa;
-  printf("\n");
+  PRINTF("\n");
   id = find_node(&src_ip);
   if (id == NULL)
     return;
-  printf("FOund node\n");
+  PRINTF("Found node ");
+  PRINT6ADDR(id->id);
+  PRINTF("\n");
 
   appdata += sizeof(uint8_t) + 2*sizeof(uip_ipaddr_t);
   memcpy(&parent_ip, appdata, sizeof(parent_ip));
@@ -153,7 +155,9 @@ void tcpip_handler() {
   parent = find_node(&parent_ip);
   if (parent == NULL)
     return;
-  printf("Found parent\n");
+  PRINTF("Found parent ");
+  PRINT6ADDR(parent->id);
+  PRINTF("\n");
 
   int i;
   for (i = 0; i < parent->child; ++i) {
@@ -164,9 +168,9 @@ void tcpip_handler() {
   id->parent = parent;
   parent->children[parent->child++] = id;
 
-  printf("parent: ");
-  uip_debug_ipaddr_print(&parent_ip);
-  printf("\n");
+  PRINTF("parent: ");
+  PRINT6ADDR(&parent_ip);
+  PRINTF("\n");
 
   print_graph();
 
@@ -183,12 +187,12 @@ void map_network() {
   memcpy(data_p, &current_rpl_instance_id, sizeof(current_rpl_instance_id));
   data_p += sizeof(current_rpl_instance_id);
   memcpy(data_p, &current_dag_id, sizeof(current_dag_id));
-  printf("sending data to ");
+  add_node(&uip_ds6_routing_table[working_host].ipaddr);
+  printf("sending data to: %2d ", working_host);
   uip_debug_ipaddr_print(&uip_ds6_routing_table[working_host].ipaddr);
   printf("\n");
-  add_node(&uip_ds6_routing_table[working_host].ipaddr);
   uip_udp_packet_sendto(ids_conn, data, sizeof(data), &uip_ds6_routing_table[working_host++].ipaddr, UIP_HTONS(MAPPER_CLIENT_PORT));
-  if (working_host >= UIP_DS6_ROUTE_NB-1) {
+  if (working_host >= UIP_DS6_ROUTE_NB) {
     working_host = 0;
     etimer_reset(&map_timer);
   }
@@ -225,7 +229,7 @@ PROCESS_THREAD(mapper, ev, data)
   ++node_index;
 
   while(1) {
-    printf("snurrar\n");
+    PRINTF("snurrar\n");
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       tcpip_handler();

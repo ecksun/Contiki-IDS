@@ -1,0 +1,6 @@
+#ifndef __RPL_COLLECT_PROJECT_CONF__
+#define __RPL_COLLECT_PROJECT_CONF__
+
+#define CSMA_CONF_MAX_NEIGHBOR_QUEUES 4
+
+#endif

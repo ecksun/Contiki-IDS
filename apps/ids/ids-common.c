@@ -13,19 +13,20 @@
 extern uip_ds6_route_t uip_ds6_routing_table[];
 extern uip_ds6_defrt_t uip_ds6_defrt_list[];
 
+void make_ipaddr_global(uip_ipaddr_t * ip) {
+  ip->u16[0] = 0xaaaa;
+}
+
 void packet_lost(uip_ipaddr_t * dest) {
-  printf("Stuff heading to ");
-  uip_debug_ipaddr_print(dest);
-  printf(" lost\n");
+  PRINTF("Packet lost on route to");
+  PRINT6ADDR(dest);
+  PRINTF("\n");
 
   uip_ipaddr_t * nexthop = NULL;
   if(uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr)){
-    // XXX Do we really care if the destination is onlink? It would be
-    // handled by RPL in the normal case, then again it might be because of
-    // interference from an attacking node, in which case we probably want to
-    // do something about it (more than what ETX already does, perhaps).
-    nexthop = &UIP_IP_BUF->destipaddr;
-    printf("A direct neighbor, let other stuff handle that\n");
+    // XXX We probably dont want to do anything if the destination is a
+    // neighbor, as that most often are handled by ETX
+    PRINTF("A direct neighbor, doing nothing\n");
     return;
   }
 
@@ -47,11 +48,9 @@ void packet_lost(uip_ipaddr_t * dest) {
   }
 
   if (metric == NULL) {
-    printf("Were unable to update metric\n");
+    PRINTF("Were unable to update metric\n");
     return;
   }
-
-  printf("%d\n", *metric);
 
   uint8_t old_metric = *metric;
   *metric -= (*metric/5);
@@ -66,5 +65,5 @@ void packet_lost(uip_ipaddr_t * dest) {
     *metric = 0;
   }
 
-  printf("Updated metric from %d to %d\n", old_metric, *metric);
+  PRINTF("Updated metric from %d to %d\n", old_metric, *metric);
 }

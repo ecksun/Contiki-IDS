@@ -15,5 +15,7 @@
  */
 void packet_lost(uip_ipaddr_t * dest);
 
+void make_ipaddr_global(uip_ipaddr_t *);
+
 #endif
 

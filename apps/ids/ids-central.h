@@ -4,6 +4,7 @@
 #include "ids-common.h"
 
 #define NETWORK_NODES 8
+#define NETWORK_DENSITY 8 // The number of neighbors for each node
 
 extern uip_ds6_route_t uip_ds6_routing_table[];
 extern rpl_instance_t instance_table[];

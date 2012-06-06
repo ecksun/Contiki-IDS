@@ -57,13 +57,13 @@ static void
 tcpip_handler(void)
 {
   static int i, j;
-  printf("tcpip_handler()\n");
+  PRINTF("tcpip_handler()\n");
   if(uip_newdata()) {
     // TODO Check that this is the right port (and perhaps proto?)
     uint8_t instance_id;
     uip_ipaddr_t dag_id;
-    uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
-    printf("\n");
+    PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+    PRINTF("\n");
     unsigned char * in_data = uip_appdata;
     memcpy(&instance_id, in_data, sizeof(instance_id));
     in_data += sizeof(instance_id);
@@ -73,11 +73,19 @@ tcpip_handler(void)
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
         for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
           if (instance_table[i].dag_table[j].used && uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id)) {
-            // uip_debug_ipaddr_print(&instance_table[i].dag_table[j].dag_id);
-            // printf("\n");
+            // My IP address | RPL Instance ID | DAG ID | Parent adress |
+            // # Neighbors | Neighbor
+            //
+            // Neighbor = [ ip_addr_t | rpl_rank_t ]
 
-            // My IP address | RPL Instance ID | DAG ID | Parent adress
-            unsigned char out_data[sizeof(instance_id) + sizeof(dag_id) + sizeof(*instance_table[i].dag_table[j].preferred_parent)];
+            // calculate size of out_data
+            int outdata_size = sizeof(instance_id) + sizeof(dag_id) + sizeof(*instance_table[i].dag_table[j].preferred_parent);
+
+            rpl_parent_t *p;
+            for(p = list_head(instance_table[i].dag_table[j].parents); p != NULL; p = list_item_next(p))
+              outdata_size += sizeof(p->addr) + sizeof(p->rank);
+
+            unsigned char out_data[outdata_size];
             unsigned char * out_data_p = out_data;
             uip_ipaddr_t * myip;
             myip = &uip_ds6_get_link_local(ADDR_PREFERRED)->ipaddr;
@@ -90,13 +98,31 @@ tcpip_handler(void)
             memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id));
             out_data_p += sizeof(instance_id) + sizeof(dag_id);
             // preferred parent
-            printf("parent: ");
-            uip_debug_ipaddr_print(&instance_table[i].dag_table[j].preferred_parent->addr);
-            printf("\n");
+            PRINTF("parent: ");
+            PRINT6ADDR(&instance_table[i].dag_table[j].preferred_parent->addr);
+            PRINTF("\n");
             memcpy(out_data_p,
                 &instance_table[i].dag_table[j].preferred_parent->addr,
                 sizeof(instance_table[i].dag_table[j].preferred_parent->addr));
             out_data_p += sizeof(instance_table[i].dag_table[j].preferred_parent->addr);
+
+            // Get all potential parents (neighbors) and their ranks
+            uint16_t * neighbors = (uint16_t *)out_data_p;
+            *neighbors = 0;
+            out_data_p += sizeof(neighbors);
+
+            for(p = list_head(instance_table[i].dag_table[j].parents); p != NULL; p = list_item_next(p)) {
+              ++(*neighbors);
+              memcpy(out_data_p, &p->addr, sizeof(p->addr));
+              out_data_p += sizeof(p->addr);
+
+              memcpy(out_data_p, &p->rank, sizeof(p->rank));
+              out_data_p += sizeof(p->rank);
+
+              PRINT6ADDR(&p->addr);
+              PRINTF(" got rank %d\n", p->rank);
+            }
+            PRINTF("%d neighbors\n", *neighbors);
 
             uip_udp_packet_sendto(mapper_conn, out_data, sizeof(out_data), &UIP_IP_BUF->srcipaddr, UIP_HTONS(MAPPER_SERVER_PORT));
             break;
@@ -128,9 +154,9 @@ set_global_address(void)
 
 
 static void handle_reply(void) {
-  printf("Got ping from ");
-  uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
-  printf("\n");
+  PRINTF("Got ping from ");
+  PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+  PRINTF("\n");
 }
 
 /*---------------------------------------------------------------------------*/
@@ -163,7 +189,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
       handle_reply();
     }
     else {
-      printf("Something happened\n");
+      PRINTF("Something happened\n");
     }
   }
 

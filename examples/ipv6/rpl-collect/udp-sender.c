@@ -73,17 +73,17 @@ tcpip_handler(void)
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
         for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
           if (instance_table[i].dag_table[j].used && uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id)) {
-            // My IP address | RPL Instance ID | DAG ID | Parent adress |
+            // My IP address | RPL Instance ID | DAG ID | My Rank | Parent adress |
             // # Neighbors | Neighbor
             //
             // Neighbor = [ ip_addr_t | rpl_rank_t ]
 
             // calculate size of out_data
-            int outdata_size = sizeof(instance_id) + sizeof(dag_id) + sizeof(*instance_table[i].dag_table[j].preferred_parent);
+            int outdata_size = sizeof(instance_id) + sizeof(dag_id) + sizeof(rpl_rank_t) + sizeof(*instance_table[i].dag_table[j].preferred_parent);
 
             rpl_parent_t *p;
             for(p = list_head(instance_table[i].dag_table[j].parents); p != NULL; p = list_item_next(p))
-              outdata_size += sizeof(p->addr) + sizeof(p->rank);
+              outdata_size += sizeof(uip_ipaddr_t) + sizeof(rpl_rank_t);
 
             unsigned char out_data[outdata_size];
             unsigned char * out_data_p = out_data;
@@ -97,6 +97,9 @@ tcpip_handler(void)
             // RPL Instance ID | DAG ID
             memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id));
             out_data_p += sizeof(instance_id) + sizeof(dag_id);
+            // My rank
+            memcpy(out_data_p, &instance_table[i].dag_table[j].rank, sizeof(&instance_table[i].dag_table[j].rank));
+            out_data_p += sizeof(instance_table[i].dag_table[j].rank);
             // preferred parent
             PRINTF("parent: ");
             PRINT6ADDR(&instance_table[i].dag_table[j].preferred_parent->addr);
@@ -113,11 +116,11 @@ tcpip_handler(void)
 
             for(p = list_head(instance_table[i].dag_table[j].parents); p != NULL; p = list_item_next(p)) {
               ++(*neighbors);
-              memcpy(out_data_p, &p->addr, sizeof(p->addr));
-              out_data_p += sizeof(p->addr);
+              memcpy(out_data_p, &p->addr, sizeof(uip_ipaddr_t));
+              out_data_p += sizeof(uip_ipaddr_t);
 
-              memcpy(out_data_p, &p->rank, sizeof(p->rank));
-              out_data_p += sizeof(p->rank);
+              memcpy(out_data_p, &p->rank, sizeof(rpl_rank_t));
+              out_data_p += sizeof(rpl_rank_t);
 
               PRINT6ADDR(&p->addr);
               PRINTF(" got rank %d\n", p->rank);

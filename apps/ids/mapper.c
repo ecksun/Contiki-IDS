@@ -68,7 +68,8 @@ struct Child {
 struct Node {
   uip_ipaddr_t * id;
   struct Node * parent;
-  rpl_rank_t parent_rank;
+  uint8_t parent_id;
+  rpl_rank_t rank;
   struct Child children[NETWORK_DENSITY];
   uint16_t neighbors;
   uint8_t visited;
@@ -191,7 +192,14 @@ void tcpip_handler() {
   PRINT6ADDR(id->id);
   PRINTF("\n");
 
-  appdata += sizeof(uint8_t) + 2*sizeof(uip_ipaddr_t);
+  // TODO make sure instanec ID and DAG ID matches
+  appdata += sizeof(uint8_t) + 2*sizeof(uip_ipaddr_t); // RPL Instance ID | DAG ID
+
+  // Rank
+  memcpy(&id->rank, appdata, sizeof(id->rank));
+  appdata += sizeof(id->rank);
+
+  // Parent
   memcpy(&parent_ip, appdata, sizeof(parent_ip));
   appdata += sizeof(parent_ip);
   make_ipaddr_global(&parent_ip);
@@ -215,14 +223,17 @@ void tcpip_handler() {
   // Scan all neighbors
   for (i = 0; i < neighbors && i < NETWORK_DENSITY; ++i) {
     neighbor_ip = (uip_ipaddr_t *)appdata;
-    appdata += sizeof(*neighbor_ip);
+    appdata += sizeof(uip_ipaddr_t);
 
     make_ipaddr_global(neighbor_ip);
 
     id->children[i].node = add_node(neighbor_ip);
 
-    memcpy(&id->children[i].rank, appdata, sizeof(id->children[i].rank));
-    appdata += sizeof(id->children[i].rank);
+    memcpy(&id->children[i].rank, appdata, sizeof(rpl_rank_t));
+    appdata += sizeof(rpl_rank_t);
+
+    if (uip_ipaddr_cmp(parent, neighbor_ip))
+      id->parent_id = i;
   }
   id->neighbors = neighbors;
 }

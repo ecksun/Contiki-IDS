@@ -147,6 +147,8 @@ void print_subtree(struct Node * node, int depth) {
   }
   node->visited = 1;
 
+  printf(" (%d) ", node->parent_id);
+
   printf("    {");
 
   for (i = 0; i < node->neighbors; ++i) {
@@ -168,6 +170,10 @@ void print_graph() {
   }
   printf("Network graph:\n\n");
   print_subtree(&network[0], 0);
+  for (i = 0; i < node_index; ++i) {
+    if (!network[i].visited)
+      print_subtree(&network[i], 0);
+  }
   printf("-----------------------\n");
 }
 
@@ -232,7 +238,7 @@ void tcpip_handler() {
     memcpy(&id->children[i].rank, appdata, sizeof(rpl_rank_t));
     appdata += sizeof(rpl_rank_t);
 
-    if (uip_ipaddr_cmp(parent, neighbor_ip))
+    if (uip_ipaddr_cmp(parent->id, neighbor_ip))
       id->parent_id = i;
   }
   id->neighbors = neighbors;
@@ -259,6 +265,78 @@ void map_network() {
     working_host = 0;
     etimer_reset(&map_timer);
   }
+}
+
+int check_child_parent_relation() {
+  int status = 1;
+  int i;
+  for (i = 0; i < node_index; ++i) {
+    // Compare the parents rank to the one
+    if (network[i].rank < network[i].children[network[i].parent_id].rank) {
+      printf("ATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
+      printf("Child: ");
+      uip_debug_ipaddr_print(network[i].id);
+      printf(" parent: ");
+      uip_debug_ipaddr_print(network[i].children[network[i].parent_id].node->id);
+      printf("\nATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
+      status = 0;
+    }
+  }
+  return status;
+}
+
+/**
+ * Visit all nodes in the given subtree
+ *
+ * This will only look at nodes which is indirectly a child to the given node.
+ * All neighbors of a node is visited who also have that node as their parent.
+ */
+void visit_tree(struct Node * node) {
+  int i;
+  if (node->visited) {
+    return;
+  }
+  node->visited = 1;
+
+  for (i = 0; i < node->neighbors; ++i) {
+    if (uip_ipaddr_cmp(node->children[i].node->parent->id, node->id))
+      visit_tree(node->children[i].node);
+  }
+}
+
+/**
+ * This will find any missing nodes
+ *
+ * If some node has as of yet not sent information about its neighbors we
+ * consider it a fault and alert the user
+ *
+ * @return True if some node have missing data.
+ */
+int missing_ids_info() {
+  int i;
+  int status = 0;
+
+  for (i = 0; i < node_index; ++i) {
+    network[i].visited = 0;
+  }
+
+  // Traverse the tree starting at the root
+  visit_tree(&network[0]);
+
+  for (i = 0; i < node_index; ++i) {
+    if (!network[i].visited) {
+      printf("Node not found: ");
+      uip_debug_ipaddr_print(network[i].id);
+      printf("\n");
+      status = 1;
+    }
+  }
+  return status;
+}
+
+void detect_inconsistencies() {
+  check_child_parent_relation();
+  missing_ids_info();
 }
 
 /*---------------------------------------------------------------------------*/
@@ -301,6 +379,7 @@ PROCESS_THREAD(mapper, ev, data)
       // Map the next DAG.
       if (working_host == 0) {
         print_graph();
+        detect_inconsistencies();
         for (; mapper_instance < RPL_MAX_INSTANCES; ++mapper_instance) {
           if (instance_table[mapper_instance].used == 0)
             continue;

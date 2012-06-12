@@ -45,14 +45,48 @@
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
+/**
+ * Connection for incoming IDS information packets
+ */
 static struct uip_udp_conn *ids_conn;
+
+/**
+ * The id of the host we are currently sending to
+ */
 static int working_host = 0;
+
+/**
+ * The current RPL instance id we are working with.
+ *
+ * Note that support for several RPL instances is not fully implemented
+ */
 static uint8_t current_rpl_instance_id;
+
+/**
+ * The ID of the current DAG we are working with.
+ *
+ * Note that support for several different DAGs are not fully implemented
+ */
 static uip_ipaddr_t current_dag_id;
+
+/**
+ * The index of the current instance
+ */
 static int mapper_instance = 0;
+
+/**
+ * The index of the current dag
+ */
 static int mapper_dag = 0;
+
+/**
+ * When this timer goes of we will try to map the network further
+ */
 static struct etimer map_timer;
 
+/**
+ * A temporary variable to ease workflow
+ */
 static uip_ipaddr_t tmp_ip;
 
 PROCESS(mapper, "IDS network mapper");
@@ -60,22 +94,63 @@ AUTOSTART_PROCESSES(&mapper);
 
 struct Node;
 
-struct Child {
-  struct Node * node;
+/**
+ * The association between a node and its neighbors
+ */
+struct Neighbor {
+  /**
+   * The neighbor
+   */
+  struct Node *node;
+  /**
+   * The rank of the node
+   */
   rpl_rank_t rank;
 };
 
+/**
+ * A network node, i.e a sensor.
+ */
 struct Node {
-  uip_ipaddr_t * id;
-  struct Node * parent;
+  /**
+   * The ID, and IP adress of this node
+   */
+  uip_ipaddr_t *id;
+  /**
+   * A pointer to this nodes parent, or NULL if none exists (that is, it is
+   * either the root or uninitialized)
+   */
+  struct Node *parent;
+  /**
+   * The index of the parent in the neighbor array, used for easier access
+   */
   uint8_t parent_id;
+  /**
+   * The claimed rank of this node
+   */
   rpl_rank_t rank;
-  struct Child children[NETWORK_DENSITY];
+  /**
+   * A list of all neighbors to this node
+   */
+  struct Neighbor neighbor[NETWORK_DENSITY];
+  /**
+   * The amount of neighbors
+   */
   uint16_t neighbors;
+  /**
+   * A status variable, used to help traversing the network graph and such.
+   */
   uint8_t visited;
 };
 
+/**
+ * A list of all nodes in the network
+ */
 static struct Node network[NETWORK_NODES];
+
+/**
+ * The length of the node list (network)
+ */
 static int node_index = 0;
 
 /**
@@ -83,10 +158,13 @@ static int node_index = 0;
  *
  * @return Returns a pointer to the node or NULL if none is found
  */
-struct Node * find_node(uip_ipaddr_t * ip) {
+struct Node *
+find_node(uip_ipaddr_t * ip)
+{
   int i;
-  for (i = 0; i < node_index; ++i) {
-    if (uip_ipaddr_cmp(ip, network[i].id)) {
+
+  for(i = 0; i < node_index; ++i) {
+    if(uip_ipaddr_cmp(ip, network[i].id)) {
       return &network[i];
     }
   }
@@ -104,30 +182,33 @@ struct Node * find_node(uip_ipaddr_t * ip) {
  *
  * @return A pointer to the new node or NULL if we ran out of memory
  */
-struct Node * add_node(uip_ipaddr_t * ip) {
+struct Node *
+add_node(uip_ipaddr_t * ip)
+{
 
   memcpy(&tmp_ip, ip, sizeof(tmp_ip));
   make_ipaddr_global(&tmp_ip);
 
-  struct Node * node = find_node(&tmp_ip);
+  struct Node *node = find_node(&tmp_ip);
 
-  if (node != NULL)
+  if(node != NULL)
     return node;
 
-  if (node_index >= NETWORK_NODES) // Out of memory
+  if(node_index >= NETWORK_NODES)       // Out of memory
     return NULL;
 
   PRINTF("Creating new node: ");
   PRINT6ADDR(&tmp_ip);
   PRINTF("\n");
   int i;
+
   // Find the IP in the routing table, we want our records to point to them in
   // order to have them somewhat persistent, and at the same time save memory
   // (by only pointing to RPLs IPs)
-  for (i = 0; i < UIP_DS6_ROUTE_NB; ++i) {
-    if (!uip_ds6_routing_table[i].isused)
+  for(i = 0; i < UIP_DS6_ROUTE_NB; ++i) {
+    if(!uip_ds6_routing_table[i].isused)
       continue;
-    if (uip_ipaddr_cmp(&uip_ds6_routing_table[i].ipaddr, ip)) {
+    if(uip_ipaddr_cmp(&uip_ds6_routing_table[i].ipaddr, ip)) {
       network[node_index].id = &uip_ds6_routing_table[i].ipaddr;
       return &network[node_index++];
     }
@@ -135,13 +216,16 @@ struct Node * add_node(uip_ipaddr_t * ip) {
   return NULL;
 }
 
-void print_subtree(struct Node * node, int depth) {
+void
+print_subtree(struct Node *node, int depth)
+{
   int i;
-  printf("%*s", depth*2, "");
+
+  printf("%*s", depth * 2, "");
 
   uip_debug_ipaddr_print(node->id);
 
-  if (node->visited) {
+  if(node->visited) {
     printf("\n");
     return;
   }
@@ -151,55 +235,66 @@ void print_subtree(struct Node * node, int depth) {
 
   printf("    {");
 
-  for (i = 0; i < node->neighbors; ++i) {
-    uip_debug_ipaddr_print(node->children[i].node->id);
-    printf(" (%d) ,", node->children[i].rank);
+  for(i = 0; i < node->neighbors; ++i) {
+    uip_debug_ipaddr_print(node->neighbor[i].node->id);
+    printf(" (%d) ,", node->neighbor[i].rank);
   }
   printf("}\n");
 
-  for (i = 0; i < node->neighbors; ++i) {
-    if (uip_ipaddr_cmp(node->children[i].node->parent->id, node->id))
-      print_subtree(node->children[i].node, depth+1);
+  for(i = 0; i < node->neighbors; ++i) {
+    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->id, node->id))
+      print_subtree(node->neighbor[i].node, depth + 1);
   }
 }
 
-void print_graph() {
+void
+print_graph()
+{
   int i;
-  for (i = 0; i < node_index; ++i) {
+
+  for(i = 0; i < node_index; ++i) {
     network[i].visited = 0;
   }
   printf("Network graph:\n\n");
   print_subtree(&network[0], 0);
-  for (i = 0; i < node_index; ++i) {
-    if (!network[i].visited)
+  for(i = 0; i < node_index; ++i) {
+    if(!network[i].visited)
       print_subtree(&network[i], 0);
   }
   printf("-----------------------\n");
 }
 
-void tcpip_handler() {
-  if (!uip_newdata())
-    return;
-
+void
+tcpip_handler()
+{
   uint8_t *appdata;
   uip_ipaddr_t src_ip, parent_ip;
   struct Node *id, *parent;
+  uint16_t neighbors;
+  uip_ipaddr_t *neighbor_ip;
+  int i;
 
-  appdata = (uint8_t *)uip_appdata;
+  if(!uip_newdata())
+    return;
+
+  appdata = (uint8_t *) uip_appdata;
   memcpy(&src_ip, appdata, sizeof(src_ip));
+
   PRINTF("Source IP: ");
   PRINT6ADDR(&src_ip);
-  make_ipaddr_global(&src_ip);
   PRINTF("\n");
+
+  make_ipaddr_global(&src_ip);
   id = add_node(&src_ip);
-  if (id == NULL)
+  if(id == NULL)
     return;
+
   PRINTF("Found node ");
   PRINT6ADDR(id->id);
   PRINTF("\n");
 
-  // TODO make sure instanec ID and DAG ID matches
-  appdata += sizeof(uint8_t) + 2*sizeof(uip_ipaddr_t); // RPL Instance ID | DAG ID
+  // TODO make sure instance ID and DAG ID matches
+  appdata += sizeof(uint8_t) + 2 * sizeof(uip_ipaddr_t);        // RPL Instance ID | DAG ID
 
   // Rank
   memcpy(&id->rank, appdata, sizeof(id->rank));
@@ -210,48 +305,59 @@ void tcpip_handler() {
   appdata += sizeof(parent_ip);
   make_ipaddr_global(&parent_ip);
   parent = add_node(&parent_ip);
-  if (parent == NULL)
+  if(parent == NULL)
     return;
+
   PRINTF("Found parent ");
   PRINT6ADDR(parent->id);
   PRINTF("\n");
 
   id->parent = parent;
 
-  uint16_t neighbors;
-  uip_ipaddr_t * neighbor_ip;
-
   // Get the number of neighbors
   memcpy(&neighbors, appdata, sizeof(neighbors));
   appdata += sizeof(neighbors);
 
-  int i;
   // Scan all neighbors
-  for (i = 0; i < neighbors && i < NETWORK_DENSITY; ++i) {
-    neighbor_ip = (uip_ipaddr_t *)appdata;
+  for(i = 0; i < neighbors && i < NETWORK_DENSITY; ++i) {
+    neighbor_ip = (uip_ipaddr_t *) appdata;
     appdata += sizeof(uip_ipaddr_t);
 
     make_ipaddr_global(neighbor_ip);
 
-    id->children[i].node = add_node(neighbor_ip);
+    id->neighbor[i].node = add_node(neighbor_ip);
 
-    memcpy(&id->children[i].rank, appdata, sizeof(rpl_rank_t));
+    memcpy(&id->neighbor[i].rank, appdata, sizeof(rpl_rank_t));
     appdata += sizeof(rpl_rank_t);
 
-    if (uip_ipaddr_cmp(parent->id, neighbor_ip))
+    if(uip_ipaddr_cmp(parent->id, neighbor_ip))
       id->parent_id = i;
   }
   id->neighbors = neighbors;
 }
 
-void map_network() {
-  for (; working_host < UIP_DS6_ROUTE_NB && !uip_ds6_routing_table[working_host].isused; ++working_host);
-  if (!uip_ds6_routing_table[working_host].isused) {
+/**
+ * Send out an information request to all nodes in the network, one at the
+ * time.
+ *
+ * This function is stateful and in order to map the entire network this needs
+ * to be run several times in order to request information from all nodes in
+ * the network.
+ */
+void
+map_network()
+{
+  for(;
+      working_host < UIP_DS6_ROUTE_NB
+      && !uip_ds6_routing_table[working_host].isused; ++working_host);
+
+  if(!uip_ds6_routing_table[working_host].isused) {
     ++working_host;
     return;
   }
   static char data[sizeof(current_rpl_instance_id) + sizeof(current_dag_id)];
-  void * data_p = data;
+  void *data_p = data;
+
   memcpy(data_p, &current_rpl_instance_id, sizeof(current_rpl_instance_id));
   data_p += sizeof(current_rpl_instance_id);
   memcpy(data_p, &current_dag_id, sizeof(current_dag_id));
@@ -260,24 +366,35 @@ void map_network() {
   PRINTF("sending data to: %2d ", working_host);
   PRINT6ADDR(&uip_ds6_routing_table[working_host].ipaddr);
   PRINTF("\n");
-  uip_udp_packet_sendto(ids_conn, data, sizeof(data), &uip_ds6_routing_table[working_host++].ipaddr, UIP_HTONS(MAPPER_CLIENT_PORT));
-  if (working_host >= UIP_DS6_ROUTE_NB) {
+  uip_udp_packet_sendto(ids_conn, data, sizeof(data),
+                        &uip_ds6_routing_table[working_host++].ipaddr,
+                        UIP_HTONS(MAPPER_CLIENT_PORT));
+
+  if(working_host >= UIP_DS6_ROUTE_NB) {
     working_host = 0;
     etimer_reset(&map_timer);
   }
 }
 
-int check_child_parent_relation() {
+/**
+ * Check that all information provided by nodes correspond with the information
+ * provided by their parent
+ */
+int
+check_child_parent_relation()
+{
   int status = 1;
   int i;
-  for (i = 0; i < node_index; ++i) {
+
+  for(i = 0; i < node_index; ++i) {
     // Compare the parents rank to the one
-    if (network[i].rank < network[i].children[network[i].parent_id].rank) {
+    if(network[i].rank < network[i].neighbor[network[i].parent_id].rank) {
       printf("ATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
       printf("Child: ");
       uip_debug_ipaddr_print(network[i].id);
       printf(" parent: ");
-      uip_debug_ipaddr_print(network[i].children[network[i].parent_id].node->id);
+      uip_debug_ipaddr_print(network[i].neighbor[network[i].parent_id].node->
+                             id);
       printf("\nATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
       status = 0;
     }
@@ -291,16 +408,19 @@ int check_child_parent_relation() {
  * This will only look at nodes which is indirectly a child to the given node.
  * All neighbors of a node is visited who also have that node as their parent.
  */
-void visit_tree(struct Node * node) {
+void
+visit_tree(struct Node *node)
+{
   int i;
-  if (node->visited) {
+
+  if(node->visited) {
     return;
   }
   node->visited = 1;
 
-  for (i = 0; i < node->neighbors; ++i) {
-    if (uip_ipaddr_cmp(node->children[i].node->parent->id, node->id))
-      visit_tree(node->children[i].node);
+  for(i = 0; i < node->neighbors; ++i) {
+    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->id, node->id))
+      visit_tree(node->neighbor[i].node);
   }
 }
 
@@ -312,19 +432,21 @@ void visit_tree(struct Node * node) {
  *
  * @return True if some node have missing data.
  */
-int missing_ids_info() {
+int
+missing_ids_info()
+{
   int i;
   int status = 0;
 
-  for (i = 0; i < node_index; ++i) {
+  for(i = 0; i < node_index; ++i) {
     network[i].visited = 0;
   }
 
   // Traverse the tree starting at the root
   visit_tree(&network[0]);
 
-  for (i = 0; i < node_index; ++i) {
-    if (!network[i].visited) {
+  for(i = 0; i < node_index; ++i) {
+    if(!network[i].visited) {
       printf("Node not found: ");
       uip_debug_ipaddr_print(network[i].id);
       printf("\n");
@@ -334,7 +456,12 @@ int missing_ids_info() {
   return status;
 }
 
-void detect_inconsistencies() {
+/**
+ * Run the intrusion detection rules
+ */
+void
+detect_inconsistencies()
+{
   check_child_parent_relation();
   missing_ids_info();
 }
@@ -343,6 +470,7 @@ void detect_inconsistencies() {
 PROCESS_THREAD(mapper, ev, data)
 {
   static struct etimer timer;
+  int i, k;
 
   PROCESS_BEGIN();
 
@@ -359,10 +487,10 @@ PROCESS_THREAD(mapper, ev, data)
   PRINTF("Created a server connection with remote address ");
   PRINT6ADDR(&ids_conn->ripaddr);
   PRINTF(" local/remote port %u/%u\n", UIP_HTONS(ids_conn->lport),
-      UIP_HTONS(ids_conn->rport));
+         UIP_HTONS(ids_conn->rport));
 
-  etimer_set(&timer, CLOCK_SECOND);
-  etimer_set(&map_timer, 20*CLOCK_SECOND);
+  etimer_set(&timer, CLOCK_SECOND); // Wake up and send the next information request
+  etimer_set(&map_timer, 20 * CLOCK_SECOND); // Restart network mapping
 
   // Add this node (root node) to the network graph
   network[0].id = &uip_ds6_get_global(ADDR_PREFERRED)->ipaddr;
@@ -373,33 +501,36 @@ PROCESS_THREAD(mapper, ev, data)
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       tcpip_handler();
-    }
-    else if (etimer_expired(&map_timer)) {
+    } else if(etimer_expired(&map_timer)) {
 
       // Map the next DAG.
-      if (working_host == 0) {
+      if(working_host == 0) {
         print_graph();
         detect_inconsistencies();
-        for (; mapper_instance < RPL_MAX_INSTANCES; ++mapper_instance) {
-          if (instance_table[mapper_instance].used == 0)
+        for(; mapper_instance < RPL_MAX_INSTANCES; ++mapper_instance) {
+          if(instance_table[mapper_instance].used == 0)
             continue;
-          for (; mapper_dag < RPL_MAX_DAG_PER_INSTANCE; ++mapper_dag) {
-            if (!instance_table[mapper_instance].dag_table[mapper_dag].used)
+          for(; mapper_dag < RPL_MAX_DAG_PER_INSTANCE; ++mapper_dag) {
+            if(!instance_table[mapper_instance].dag_table[mapper_dag].used)
               continue;
 
-            current_rpl_instance_id = instance_table[mapper_instance].instance_id;
-            memcpy(&current_dag_id, &instance_table[mapper_instance].dag_table[mapper_dag].dag_id, sizeof(current_dag_id));
+            current_rpl_instance_id =
+              instance_table[mapper_instance].instance_id;
+            memcpy(&current_dag_id,
+                   &instance_table[mapper_instance].dag_table[mapper_dag].
+                   dag_id, sizeof(current_dag_id));
 
-            int i, k;
             // Reset the roots neighbor list and ranks
 
-            for (i = 0, k = 0; i < UIP_DS6_ROUTE_NB; ++i) {
-              if (uip_ds6_routing_table[i].isused) {
-                memcpy(&tmp_ip, &uip_ds6_routing_table[i].nexthop, sizeof(tmp_ip));
+            for(i = 0, k = 0; i < UIP_DS6_ROUTE_NB; ++i) {
+              if(uip_ds6_routing_table[i].isused) {
+                memcpy(&tmp_ip, &uip_ds6_routing_table[i].nexthop,
+                       sizeof(tmp_ip));
                 make_ipaddr_global(&tmp_ip);
-                if (uip_ipaddr_cmp(&uip_ds6_routing_table[i].ipaddr, &tmp_ip)) {
-                  network[0].children[k].node = add_node(&uip_ds6_routing_table[i].ipaddr);
-                  network[0].children[k].rank = 0;
+                if(uip_ipaddr_cmp(&uip_ds6_routing_table[i].ipaddr, &tmp_ip)) {
+                  network[0].neighbor[k].node =
+                    add_node(&uip_ds6_routing_table[i].ipaddr);
+                  network[0].neighbor[k].rank = 0;
 
                   k++;
                 }
@@ -410,14 +541,14 @@ PROCESS_THREAD(mapper, ev, data)
             goto found_network;
 
           }
-          if (mapper_dag >= RPL_MAX_DAG_PER_INSTANCE-1)
+          if(mapper_dag >= RPL_MAX_DAG_PER_INSTANCE - 1)
             mapper_dag = 0;
         }
-        if (mapper_instance >= RPL_MAX_INSTANCES-1)
+        if(mapper_instance >= RPL_MAX_INSTANCES - 1)
           mapper_instance = 0;
       }
 
-found_network:
+    found_network:
       map_network();
       etimer_reset(&timer);
     }

@@ -283,7 +283,7 @@ tcpip_handler()
     return;
 
   appdata = (uint8_t *) uip_appdata;
-  memcpy(&src_ip, appdata, sizeof(src_ip));
+  MAPPER_GET_PACKETDATA(src_ip, appdata);
 
   PRINTF("Source IP: ");
   PRINT6ADDR(&src_ip);
@@ -301,16 +301,14 @@ tcpip_handler()
   // TODO make sure instance ID and DAG ID matches
 
   // RPL Instance ID | DODAG ID | DAG Version | Timestamp
-  appdata += sizeof(uint8_t) + 2 * sizeof(uip_ipaddr_t);        // RPL Instance ID | DAG ID
+  appdata += sizeof(uint8_t) + sizeof(uip_ipaddr_t);        // RPL Instance ID | DAG ID
   appdata += sizeof(uint8_t)*2;
 
   // Rank
-  memcpy(&id->rank, appdata, sizeof(id->rank));
-  appdata += sizeof(id->rank);
+  MAPPER_GET_PACKETDATA(id->rank, appdata);
 
   // Parent
-  memcpy(&parent_ip, appdata, sizeof(parent_ip));
-  appdata += sizeof(parent_ip);
+  MAPPER_GET_PACKETDATA(parent_ip, appdata);
   make_ipaddr_global(&parent_ip);
   parent = add_node(&parent_ip);
   if(parent == NULL)
@@ -323,8 +321,7 @@ tcpip_handler()
   id->parent = parent;
 
   // Get the number of neighbors
-  memcpy(&neighbors, appdata, sizeof(neighbors));
-  appdata += sizeof(neighbors);
+  MAPPER_GET_PACKETDATA(neighbors, appdata);
 
   // Scan all neighbors
   for(i = 0; i < neighbors && i < NETWORK_DENSITY; ++i) {
@@ -335,8 +332,7 @@ tcpip_handler()
 
     id->neighbor[i].node = add_node(neighbor_ip);
 
-    memcpy(&id->neighbor[i].rank, appdata, sizeof(rpl_rank_t));
-    appdata += sizeof(rpl_rank_t);
+    MAPPER_GET_PACKETDATA(id->neighbor[i].rank, appdata);
 
     if(uip_ipaddr_cmp(parent->id, neighbor_ip))
       id->parent_id = i;
@@ -368,17 +364,10 @@ map_network()
     sizeof(timestamp)];
   void *data_p = data;
 
-  memcpy(data_p, &current_rpl_instance_id, sizeof(current_rpl_instance_id));
-  data_p += sizeof(current_rpl_instance_id);
-
-  memcpy(data_p, &current_dag->dag_id, sizeof(current_dag->dag_id));
-  data_p += sizeof(current_dag->dag_id);
-
-  memcpy(data_p, &current_dag->version, sizeof(current_dag->version));
-  data_p += sizeof(current_dag->version);
-
-  memcpy(data_p, &timestamp, sizeof(timestamp));
-  data_p += sizeof(timestamp);
+  MAPPER_ADD_PACKETDATA(data_p, current_rpl_instance_id);
+  MAPPER_ADD_PACKETDATA(data_p, current_dag->dag_id);
+  MAPPER_ADD_PACKETDATA(data_p, current_dag->version);
+  MAPPER_ADD_PACKETDATA(data_p, timestamp);
 
   add_node(&uip_ds6_routing_table[working_host].ipaddr);
 

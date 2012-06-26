@@ -63,16 +63,14 @@ tcpip_handler(void)
     uint8_t instance_id;
     uip_ipaddr_t dag_id;
     uint8_t version;
-    // uint8_t timestamp;
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
     PRINTF("\n");
     unsigned char * in_data = uip_appdata;
-    memcpy(&instance_id, in_data, sizeof(instance_id));
-    in_data += sizeof(instance_id);
-    memcpy(&dag_id, in_data, sizeof(dag_id));
-    in_data += sizeof(dag_id);
-    memcpy(&version, in_data, sizeof(version));
-    in_data += sizeof(version);
+    MAPPER_GET_PACKETDATA(instance_id, in_data);
+    MAPPER_GET_PACKETDATA(dag_id, in_data);
+    MAPPER_GET_PACKETDATA(version, in_data);
+
+    // uint8_t timestamp;
     // memcpy(&timestamp, in_data, sizeof(timestamp));
     // in_data += sizeof(timestamp);
 
@@ -109,8 +107,7 @@ tcpip_handler(void)
             if (myip == NULL) // We have no interface to use
               return;
             // My IP adress
-            memcpy(out_data_p, myip, sizeof(uip_ipaddr_t));
-            out_data_p += sizeof(uip_ipaddr_t);
+            MAPPER_ADD_PACKETDATA(out_data_p, *myip);
 
             // RPL Instance ID | DODAG ID | DODAG Version Number | Timestamp
             memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id) +
@@ -118,17 +115,14 @@ tcpip_handler(void)
             out_data_p += sizeof(instance_id) + sizeof(dag_id) + sizeof(uint8_t)*2;
 
             // My rank
-            memcpy(out_data_p, &instance_table[i].dag_table[j].rank, sizeof(&instance_table[i].dag_table[j].rank));
-            out_data_p += sizeof(instance_table[i].dag_table[j].rank);
+            MAPPER_ADD_PACKETDATA(out_data_p, instance_table[i].dag_table[j].rank);
 
             // preferred parent
             PRINTF("parent: ");
             PRINT6ADDR(&instance_table[i].dag_table[j].preferred_parent->addr);
             PRINTF("\n");
-            memcpy(out_data_p,
-                &instance_table[i].dag_table[j].preferred_parent->addr,
-                sizeof(instance_table[i].dag_table[j].preferred_parent->addr));
-            out_data_p += sizeof(instance_table[i].dag_table[j].preferred_parent->addr);
+            MAPPER_ADD_PACKETDATA(out_data_p,
+                instance_table[i].dag_table[j].preferred_parent->addr);
 
             // Get all potential parents (neighbors) and their ranks
             uint16_t * neighbors = (uint16_t *)out_data_p;
@@ -137,11 +131,9 @@ tcpip_handler(void)
 
             for(p = list_head(instance_table[i].dag_table[j].parents); p != NULL; p = list_item_next(p)) {
               ++(*neighbors);
-              memcpy(out_data_p, &p->addr, sizeof(uip_ipaddr_t));
-              out_data_p += sizeof(uip_ipaddr_t);
+              MAPPER_ADD_PACKETDATA(out_data_p, p->addr);
 
-              memcpy(out_data_p, &p->rank, sizeof(rpl_rank_t));
-              out_data_p += sizeof(rpl_rank_t);
+              MAPPER_ADD_PACKETDATA(out_data_p, p->rank);
 
               PRINT6ADDR(&p->addr);
               PRINTF(" got rank %d\n", p->rank);

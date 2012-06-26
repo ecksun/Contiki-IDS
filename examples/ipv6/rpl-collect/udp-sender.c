@@ -62,27 +62,44 @@ tcpip_handler(void)
     // TODO Check that this is the right port (and perhaps proto?)
     uint8_t instance_id;
     uip_ipaddr_t dag_id;
+    uint8_t version;
+    // uint8_t timestamp;
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
     PRINTF("\n");
     unsigned char * in_data = uip_appdata;
     memcpy(&instance_id, in_data, sizeof(instance_id));
     in_data += sizeof(instance_id);
     memcpy(&dag_id, in_data, sizeof(dag_id));
+    in_data += sizeof(dag_id);
+    memcpy(&version, in_data, sizeof(version));
+    in_data += sizeof(version);
+    // memcpy(&timestamp, in_data, sizeof(timestamp));
+    // in_data += sizeof(timestamp);
 
     for (i = 0; i < RPL_MAX_INSTANCES; ++i) {
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
         for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
-          if (instance_table[i].dag_table[j].used && uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id)) {
-            // My IP address | RPL Instance ID | DAG ID | My Rank | Parent adress |
+          if (instance_table[i].dag_table[j].used &&
+              uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id))
+          {
+            if (instance_table[i].dag_table[j].version != version) {
+              PRINTF("Wrong RPL DODAG Version Number\n");
+              return;
+            }
+            // Node ID (our IP) | RPL Instance ID | DODAG ID |
+            // DODAG Version Number | Timestamp | My Rank | Parent adress |
             // # Neighbors | Neighbor
             //
             // Neighbor = [ ip_addr_t | rpl_rank_t ]
 
             // calculate size of out_data
-            int outdata_size = sizeof(instance_id) + sizeof(dag_id) + sizeof(rpl_rank_t) + sizeof(*instance_table[i].dag_table[j].preferred_parent);
+            int outdata_size = sizeof(instance_id) + sizeof(dag_id) +
+              sizeof(version) + sizeof(uint8_t) + sizeof(rpl_rank_t) +
+              sizeof(*instance_table[i].dag_table[j].preferred_parent);
 
             rpl_parent_t *p;
-            for(p = list_head(instance_table[i].dag_table[j].parents); p != NULL; p = list_item_next(p))
+            for(p = list_head(instance_table[i].dag_table[j].parents);
+                p != NULL; p = list_item_next(p))
               outdata_size += sizeof(uip_ipaddr_t) + sizeof(rpl_rank_t);
 
             unsigned char out_data[outdata_size];
@@ -94,12 +111,16 @@ tcpip_handler(void)
             // My IP adress
             memcpy(out_data_p, myip, sizeof(uip_ipaddr_t));
             out_data_p += sizeof(uip_ipaddr_t);
-            // RPL Instance ID | DAG ID
-            memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id));
-            out_data_p += sizeof(instance_id) + sizeof(dag_id);
+
+            // RPL Instance ID | DODAG ID | DODAG Version Number | Timestamp
+            memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id) +
+                sizeof(uint8_t)*2);
+            out_data_p += sizeof(instance_id) + sizeof(dag_id) + sizeof(uint8_t)*2;
+
             // My rank
             memcpy(out_data_p, &instance_table[i].dag_table[j].rank, sizeof(&instance_table[i].dag_table[j].rank));
             out_data_p += sizeof(instance_table[i].dag_table[j].rank);
+
             // preferred parent
             PRINTF("parent: ");
             PRINT6ADDR(&instance_table[i].dag_table[j].preferred_parent->addr);

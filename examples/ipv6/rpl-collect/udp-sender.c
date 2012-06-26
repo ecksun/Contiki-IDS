@@ -61,6 +61,7 @@ tcpip_handler(void)
   if(uip_newdata()) {
     // TODO Check that this is the right port (and perhaps proto?)
     uint8_t instance_id;
+    uint8_t timestamp;
     uip_ipaddr_t dag_id;
     uint8_t version;
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
@@ -69,10 +70,7 @@ tcpip_handler(void)
     MAPPER_GET_PACKETDATA(instance_id, in_data);
     MAPPER_GET_PACKETDATA(dag_id, in_data);
     MAPPER_GET_PACKETDATA(version, in_data);
-
-    // uint8_t timestamp;
-    // memcpy(&timestamp, in_data, sizeof(timestamp));
-    // in_data += sizeof(timestamp);
+    MAPPER_GET_PACKETDATA(timestamp, in_data);
 
     for (i = 0; i < RPL_MAX_INSTANCES; ++i) {
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
@@ -84,6 +82,12 @@ tcpip_handler(void)
               PRINTF("Wrong RPL DODAG Version Number\n");
               return;
             }
+
+            printf("asdf :");
+            uip_debug_ipaddr_print(&instance_table[i].dag_table[j].dag_id);
+            printf("\n");
+            printf("instance_id = %d\n", instance_id);
+
             // Node ID (our IP) | RPL Instance ID | DODAG ID |
             // DODAG Version Number | Timestamp | My Rank | Parent adress |
             // # Neighbors | Neighbor
@@ -110,9 +114,11 @@ tcpip_handler(void)
             MAPPER_ADD_PACKETDATA(out_data_p, *myip);
 
             // RPL Instance ID | DODAG ID | DODAG Version Number | Timestamp
-            memcpy(out_data_p, in_data, sizeof(instance_id) + sizeof(dag_id) +
-                sizeof(uint8_t)*2);
-            out_data_p += sizeof(instance_id) + sizeof(dag_id) + sizeof(uint8_t)*2;
+
+            MAPPER_ADD_PACKETDATA(out_data_p, instance_id);
+            MAPPER_ADD_PACKETDATA(out_data_p, dag_id);
+            MAPPER_ADD_PACKETDATA(out_data_p, version);
+            MAPPER_ADD_PACKETDATA(out_data_p, timestamp);
 
             // My rank
             MAPPER_ADD_PACKETDATA(out_data_p, instance_table[i].dag_table[j].rank);

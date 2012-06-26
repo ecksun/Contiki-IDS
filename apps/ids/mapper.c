@@ -56,6 +56,11 @@ static struct uip_udp_conn *ids_conn;
 static int working_host = 0;
 
 /**
+ * A timestamp to make sure mapping information recieved is recent.
+ */
+static uint8_t timestamp = 0;
+
+/**
  * The current RPL instance id we are working with.
  *
  * Note that support for several RPL instances is not fully implemented
@@ -67,7 +72,7 @@ static uint8_t current_rpl_instance_id;
  *
  * Note that support for several different DAGs are not fully implemented
  */
-static uip_ipaddr_t current_dag_id;
+static rpl_dag_t * current_dag;
 
 /**
  * The index of the current instance
@@ -294,7 +299,10 @@ tcpip_handler()
   PRINTF("\n");
 
   // TODO make sure instance ID and DAG ID matches
+
+  // RPL Instance ID | DODAG ID | DAG Version | Timestamp
   appdata += sizeof(uint8_t) + 2 * sizeof(uip_ipaddr_t);        // RPL Instance ID | DAG ID
+  appdata += sizeof(uint8_t)*2;
 
   // Rank
   memcpy(&id->rank, appdata, sizeof(id->rank));
@@ -355,12 +363,23 @@ map_network()
     ++working_host;
     return;
   }
-  static char data[sizeof(current_rpl_instance_id) + sizeof(current_dag_id)];
+  static char data[sizeof(current_rpl_instance_id) +
+    sizeof(current_dag->dag_id) + sizeof(current_dag->version) +
+    sizeof(timestamp)];
   void *data_p = data;
 
   memcpy(data_p, &current_rpl_instance_id, sizeof(current_rpl_instance_id));
   data_p += sizeof(current_rpl_instance_id);
-  memcpy(data_p, &current_dag_id, sizeof(current_dag_id));
+
+  memcpy(data_p, &current_dag->dag_id, sizeof(current_dag->dag_id));
+  data_p += sizeof(current_dag->dag_id);
+
+  memcpy(data_p, &current_dag->version, sizeof(current_dag->version));
+  data_p += sizeof(current_dag->version);
+
+  memcpy(data_p, &timestamp, sizeof(timestamp));
+  data_p += sizeof(timestamp);
+
   add_node(&uip_ds6_routing_table[working_host].ipaddr);
 
   PRINTF("sending data to: %2d ", working_host);
@@ -464,6 +483,7 @@ detect_inconsistencies()
 {
   check_child_parent_relation();
   missing_ids_info();
+  // TODO Check if any node is lying about its rank
 }
 
 /*---------------------------------------------------------------------------*/
@@ -507,6 +527,10 @@ PROCESS_THREAD(mapper, ev, data)
       if(working_host == 0) {
         print_graph();
         detect_inconsistencies();
+
+        // This will overflow, thats OK (and well-defined as it is unsigned)
+        ++timestamp;
+
         for(; mapper_instance < RPL_MAX_INSTANCES; ++mapper_instance) {
           if(instance_table[mapper_instance].used == 0)
             continue;
@@ -516,9 +540,7 @@ PROCESS_THREAD(mapper, ev, data)
 
             current_rpl_instance_id =
               instance_table[mapper_instance].instance_id;
-            memcpy(&current_dag_id,
-                   &instance_table[mapper_instance].dag_table[mapper_dag].
-                   dag_id, sizeof(current_dag_id));
+            current_dag = &instance_table[mapper_instance].dag_table[mapper_dag];
 
             // Reset the roots neighbor list and ranks
 

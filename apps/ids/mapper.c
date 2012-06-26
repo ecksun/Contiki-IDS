@@ -274,6 +274,8 @@ tcpip_handler()
 {
   uint8_t *appdata;
   uip_ipaddr_t src_ip, parent_ip;
+  uint8_t rpl_instance_id, version_recieved, timestamp_recieved;
+
   struct Node *id, *parent;
   uint16_t neighbors;
   uip_ipaddr_t *neighbor_ip;
@@ -298,11 +300,29 @@ tcpip_handler()
   PRINT6ADDR(id->id);
   PRINTF("\n");
 
-  // TODO make sure instance ID and DAG ID matches
-
   // RPL Instance ID | DODAG ID | DAG Version | Timestamp
-  appdata += sizeof(uint8_t) + sizeof(uip_ipaddr_t);        // RPL Instance ID | DAG ID
-  appdata += sizeof(uint8_t)*2;
+
+  MAPPER_GET_PACKETDATA(rpl_instance_id, appdata);
+
+  if (!uip_ipaddr_cmp((uip_ipaddr_t *)appdata, &current_dag->dag_id)) {
+    PRINTF("Mapping information recieved which does not match our current");
+    PRINTF("DODAG, information ignored\n");
+    return;
+  }
+  appdata += sizeof(uip_ipaddr_t); // DODAG ID
+
+  MAPPER_GET_PACKETDATA(version_recieved, appdata);
+  if (version_recieved != current_dag->version) {
+    PRINTF("Non-matching DODAG Version Number for incoming mapping information\n");
+    PRINTF("got %d while expecting %d\n", version_recieved, current_dag->version);
+    return;
+  }
+  MAPPER_GET_PACKETDATA(timestamp_recieved, appdata);
+  if (timestamp_recieved != timestamp) {
+    PRINTF("Non-matching timestamp for incoming mapping information\n");
+    PRINTF("got %d while expecting %d\n", timestamp_recieved, timestamp);
+    return;
+  }
 
   // Rank
   MAPPER_GET_PACKETDATA(id->rank, appdata);

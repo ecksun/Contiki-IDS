@@ -1,1 +1,1 @@
-ids_src = ids-common.c mapper.c
+ids_src = ids-common.c mapper.c mapper-client.c

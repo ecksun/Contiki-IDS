@@ -12,7 +12,6 @@
 #include "net/uip-debug.h"
 
 static struct uip_udp_conn *mapper_conn;
-static uip_ipaddr_t server_ipaddr;
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
 extern rpl_instance_t instance_table[];
 

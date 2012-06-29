@@ -6,6 +6,7 @@
 #include "net/rpl/rpl.h"
 #include "net/rpl/rpl-private.h"
 
+#define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
 #include <stdio.h>
@@ -66,4 +67,11 @@ void packet_lost(uip_ipaddr_t * dest) {
   }
 
   PRINTF("Updated metric from %d to %d\n", old_metric, *metric);
+}
+
+uint16_t compress_ipaddr_t(uip_ipaddr_t * ipaddr) {
+  PRINTF("Compressing ");
+  PRINT6ADDR(ipaddr);
+  PRINTF(" to %x\n", ipaddr->u16[7]);
+  return ipaddr->u16[7];
 }

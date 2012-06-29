@@ -22,11 +22,13 @@ static void
 tcpip_handler(void)
 {
   static int i, j;
+  uint16_t tmp_id;
   PRINTF("tcpip_handler()\n");
   if(uip_newdata()) {
     // TODO Check that this is the right port (and perhaps proto?)
     uint8_t instance_id;
     uint8_t timestamp;
+    // TODO Compress DAG
     uip_ipaddr_t dag_id;
     uint8_t version;
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
@@ -47,21 +49,25 @@ tcpip_handler(void)
               PRINTF("Wrong RPL DODAG Version Number\n");
               return;
             }
-            // Node ID (our IP) | RPL Instance ID | DODAG ID |
-            // DODAG Version Number | Timestamp | My Rank | Parent adress |
-            // # Neighbors | Neighbor
+            // All IPs are compressed to fit in a uint16_t (compress_ipaddr_t)
+            // rpl_rank_t is a uint16_t
             //
-            // Neighbor = [ ip_addr_t | rpl_rank_t ]
+            // My IP (uint16_t) | IID (uint8_t) | DAG ID (ipaddr_t) |
+            // Dag Ver.  (uint8_t) | Timestamp (uint8_t) | Rank (uint16_t) |
+            // Parent IP (uint16_t) | #neighbors (uint16_t) | NEIGHBORS
+            //
+            // NEIGHBORS = Neighbor ID (uint16_t) | Neighbor rank (uint16_t)
 
             // calculate size of out_data
-            int outdata_size = sizeof(instance_id) + sizeof(dag_id) +
-              sizeof(version) + sizeof(uint8_t) + sizeof(rpl_rank_t) +
-              sizeof(*instance_table[i].dag_table[j].preferred_parent);
+            int outdata_size =
+              sizeof(uint16_t) + sizeof(instance_id) + sizeof(dag_id) + sizeof(version) +
+              sizeof(version) + sizeof(timestamp) + sizeof(rpl_rank_t) +
+              sizeof(uint16_t) + sizeof(uint16_t);
 
             rpl_parent_t *p;
             for(p = list_head(instance_table[i].dag_table[j].parents);
                 p != NULL; p = list_item_next(p))
-              outdata_size += sizeof(uip_ipaddr_t) + sizeof(rpl_rank_t);
+              outdata_size += sizeof(uint16_t) + sizeof(rpl_rank_t);
 
             unsigned char out_data[outdata_size];
             unsigned char * out_data_p = out_data;
@@ -70,7 +76,8 @@ tcpip_handler(void)
             if (myip == NULL) // We have no interface to use
               return;
             // My IP adress
-            MAPPER_ADD_PACKETDATA(out_data_p, *myip);
+            tmp_id = compress_ipaddr_t(myip);
+            MAPPER_ADD_PACKETDATA(out_data_p, tmp_id);
 
             // RPL Instance ID | DODAG ID | DODAG Version Number | Timestamp
 
@@ -86,8 +93,9 @@ tcpip_handler(void)
             PRINTF("parent: ");
             PRINT6ADDR(&instance_table[i].dag_table[j].preferred_parent->addr);
             PRINTF("\n");
-            MAPPER_ADD_PACKETDATA(out_data_p,
-                instance_table[i].dag_table[j].preferred_parent->addr);
+
+            tmp_id = compress_ipaddr_t(&instance_table[i].dag_table[j].preferred_parent->addr);
+            MAPPER_ADD_PACKETDATA(out_data_p, tmp_id);
 
             // Get all potential parents (neighbors) and their ranks
             uint16_t * neighbors = (uint16_t *)out_data_p;
@@ -97,7 +105,8 @@ tcpip_handler(void)
             for(p = list_head(instance_table[i].dag_table[j].parents); p !=
                 NULL; p = list_item_next(p)) {
               ++(*neighbors);
-              MAPPER_ADD_PACKETDATA(out_data_p, p->addr);
+              tmp_id = compress_ipaddr_t(&p->addr);
+              MAPPER_ADD_PACKETDATA(out_data_p, tmp_id);
 
               MAPPER_ADD_PACKETDATA(out_data_p, p->rank);
 

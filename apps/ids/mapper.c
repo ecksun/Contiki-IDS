@@ -118,9 +118,14 @@ struct Neighbor {
  */
 struct Node {
   /**
-   * The ID, and IP adress of this node
+   * IP adress of this node
    */
-  uip_ipaddr_t *id;
+  uip_ipaddr_t *ip;
+
+  /**
+   * The compressed IP of the node works as its ID
+   */
+  uint16_t id;
   /**
    * A pointer to this nodes parent, or NULL if none exists (that is, it is
    * either the root or uninitialized)
@@ -159,17 +164,17 @@ static struct Node network[NETWORK_NODES];
 static int node_index = 0;
 
 /**
- * Search for a node by IP
+ * Search for a node by ID
  *
  * @return Returns a pointer to the node or NULL if none is found
  */
 struct Node *
-find_node(uip_ipaddr_t * ip)
+find_node(uint16_t id)
 {
   int i;
 
   for(i = 0; i < node_index; ++i) {
-    if(uip_ipaddr_cmp(ip, network[i].id)) {
+    if(id == network[i].id) {
       return &network[i];
     }
   }
@@ -177,24 +182,20 @@ find_node(uip_ipaddr_t * ip)
 }
 
 /**
- * Add a new node to the network graph
- *
- * Note that as the ip pointer is saved the memory it points to needs to be
- * kept
+ * Add a new node to the network graph based on the compressed IP
  *
  * If the node already exists in the network no new node will be added and a
  * pointer to that adress will be returned
  *
+ * This function will go through the routing table and add a pointer to the IP
+ * in the routing table, in order to save memory.
+ *
  * @return A pointer to the new node or NULL if we ran out of memory
  */
 struct Node *
-add_node(uip_ipaddr_t * ip)
+add_node(uint16_t id)
 {
-
-  memcpy(&tmp_ip, ip, sizeof(tmp_ip));
-  make_ipaddr_global(&tmp_ip);
-
-  struct Node *node = find_node(&tmp_ip);
+  struct Node *node = find_node(id);
 
   if(node != NULL)
     return node;
@@ -202,9 +203,7 @@ add_node(uip_ipaddr_t * ip)
   if(node_index >= NETWORK_NODES)       // Out of memory
     return NULL;
 
-  PRINTF("Creating new node: ");
-  PRINT6ADDR(&tmp_ip);
-  PRINTF("\n");
+  PRINTF("Creating new node with ID: %x\n", id);
   int i;
 
   // Find the IP in the routing table, we want our records to point to them in
@@ -213,11 +212,13 @@ add_node(uip_ipaddr_t * ip)
   for(i = 0; i < UIP_DS6_ROUTE_NB; ++i) {
     if(!uip_ds6_routing_table[i].isused)
       continue;
-    if(uip_ipaddr_cmp(&uip_ds6_routing_table[i].ipaddr, ip)) {
-      network[node_index].id = &uip_ds6_routing_table[i].ipaddr;
+    if(compress_ipaddr_t(&uip_ds6_routing_table[i].ipaddr) == id) {
+      network[node_index].ip = &uip_ds6_routing_table[i].ipaddr;
+      network[node_index].id = compress_ipaddr_t(network[node_index].ip);
       return &network[node_index++];
     }
   }
+  PRINTF("No entry in the routing table matching ID %x!\n", id);
   return NULL;
 }
 
@@ -228,7 +229,7 @@ print_subtree(struct Node *node, int depth)
 
   printf("%*s", depth * 2, "");
 
-  uip_debug_ipaddr_print(node->id);
+  uip_debug_ipaddr_print(node->ip);
 
   if(node->visited) {
     printf("\n");
@@ -241,13 +242,13 @@ print_subtree(struct Node *node, int depth)
   printf("    {");
 
   for(i = 0; i < node->neighbors; ++i) {
-    uip_debug_ipaddr_print(node->neighbor[i].node->id);
+    uip_debug_ipaddr_print(node->neighbor[i].node->ip);
     printf(" (%d) ,", node->neighbor[i].rank);
   }
   printf("}\n");
 
   for(i = 0; i < node->neighbors; ++i) {
-    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->id, node->id))
+    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->ip, node->ip))
       print_subtree(node->neighbor[i].node, depth + 1);
   }
 }
@@ -273,37 +274,40 @@ void
 tcpip_handler()
 {
   uint8_t *appdata;
-  uip_ipaddr_t src_ip, parent_ip;
+  uint16_t src_id, parent_id;
   uint8_t rpl_instance_id, version_recieved, timestamp_recieved;
 
   struct Node *id, *parent;
   uint16_t neighbors;
-  uip_ipaddr_t *neighbor_ip;
+  uint16_t neighbor_id;
   int i;
 
   if(!uip_newdata())
     return;
 
+  // Make sure it is the correct port
+  if (UIP_HTONS(UIP_UDP_BUF->destport) != MAPPER_SERVER_PORT)
+    return;
+
+
   appdata = (uint8_t *) uip_appdata;
-  MAPPER_GET_PACKETDATA(src_ip, appdata);
+  MAPPER_GET_PACKETDATA(src_id, appdata);
 
-  PRINTF("Source IP: ");
-  PRINT6ADDR(&src_ip);
-  PRINTF("\n");
+  PRINTF("Source ID: %x\n", src_id);
 
-  make_ipaddr_global(&src_ip);
-  id = add_node(&src_ip);
+  id = add_node(src_id);
   if(id == NULL)
     return;
 
   PRINTF("Found node ");
-  PRINT6ADDR(id->id);
+  PRINT6ADDR(id->ip);
   PRINTF("\n");
 
   // RPL Instance ID | DODAG ID | DAG Version | Timestamp
 
   MAPPER_GET_PACKETDATA(rpl_instance_id, appdata);
 
+  // TODO Compress DAG
   if (!uip_ipaddr_cmp((uip_ipaddr_t *)appdata, &current_dag->dag_id)) {
     PRINTF("Mapping information recieved which does not match our current");
     PRINTF("DODAG, information ignored\n");
@@ -328,14 +332,13 @@ tcpip_handler()
   MAPPER_GET_PACKETDATA(id->rank, appdata);
 
   // Parent
-  MAPPER_GET_PACKETDATA(parent_ip, appdata);
-  make_ipaddr_global(&parent_ip);
-  parent = add_node(&parent_ip);
+  MAPPER_GET_PACKETDATA(parent_id, appdata);
+  parent = add_node(parent_id);
   if(parent == NULL)
     return;
 
   PRINTF("Found parent ");
-  PRINT6ADDR(parent->id);
+  PRINT6ADDR(parent->ip);
   PRINTF("\n");
 
   id->parent = parent;
@@ -345,16 +348,13 @@ tcpip_handler()
 
   // Scan all neighbors
   for(i = 0; i < neighbors && i < NETWORK_DENSITY; ++i) {
-    neighbor_ip = (uip_ipaddr_t *) appdata;
-    appdata += sizeof(uip_ipaddr_t);
+    MAPPER_GET_PACKETDATA(neighbor_id, appdata);
 
-    make_ipaddr_global(neighbor_ip);
-
-    id->neighbor[i].node = add_node(neighbor_ip);
+    id->neighbor[i].node = add_node(neighbor_id);
 
     MAPPER_GET_PACKETDATA(id->neighbor[i].rank, appdata);
 
-    if(uip_ipaddr_cmp(parent->id, neighbor_ip))
+    if(parent->id == neighbor_id)
       id->parent_id = i;
   }
   id->neighbors = neighbors;
@@ -389,7 +389,7 @@ map_network()
   MAPPER_ADD_PACKETDATA(data_p, current_dag->version);
   MAPPER_ADD_PACKETDATA(data_p, timestamp);
 
-  add_node(&uip_ds6_routing_table[working_host].ipaddr);
+  add_node(compress_ipaddr_t(&uip_ds6_routing_table[working_host].ipaddr));
 
   PRINTF("sending data to: %2d ", working_host);
   PRINT6ADDR(&uip_ds6_routing_table[working_host].ipaddr);
@@ -419,10 +419,10 @@ check_child_parent_relation()
     if(network[i].rank < network[i].neighbor[network[i].parent_id].rank) {
       printf("ATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
       printf("Child: ");
-      uip_debug_ipaddr_print(network[i].id);
+      uip_debug_ipaddr_print(network[i].ip);
       printf(" parent: ");
       uip_debug_ipaddr_print(network[i].neighbor[network[i].parent_id].node->
-                             id);
+                             ip);
       printf("\nATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
       status = 0;
     }
@@ -447,7 +447,7 @@ visit_tree(struct Node *node)
   node->visited = 1;
 
   for(i = 0; i < node->neighbors; ++i) {
-    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->id, node->id))
+    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->ip, node->ip))
       visit_tree(node->neighbor[i].node);
   }
 }
@@ -476,7 +476,7 @@ missing_ids_info()
   for(i = 0; i < node_index; ++i) {
     if(!network[i].visited) {
       printf("Node not found: ");
-      uip_debug_ipaddr_print(network[i].id);
+      uip_debug_ipaddr_print(network[i].ip);
       printf("\n");
       status = 1;
     }
@@ -519,10 +519,11 @@ PROCESS_THREAD(mapper, ev, data)
          UIP_HTONS(ids_conn->rport));
 
   etimer_set(&timer, CLOCK_SECOND); // Wake up and send the next information request
-  etimer_set(&map_timer, 20 * CLOCK_SECOND); // Restart network mapping
+  etimer_set(&map_timer, 30 * CLOCK_SECOND); // Restart network mapping
 
   // Add this node (root node) to the network graph
-  network[0].id = &uip_ds6_get_global(ADDR_PREFERRED)->ipaddr;
+  network[0].ip = &uip_ds6_get_global(ADDR_PREFERRED)->ipaddr;
+  network[0].id = compress_ipaddr_t(network[0].ip);
   ++node_index;
 
   while(1) {
@@ -560,7 +561,7 @@ PROCESS_THREAD(mapper, ev, data)
                 make_ipaddr_global(&tmp_ip);
                 if(uip_ipaddr_cmp(&uip_ds6_routing_table[i].ipaddr, &tmp_ip)) {
                   network[0].neighbor[k].node =
-                    add_node(&uip_ds6_routing_table[i].ipaddr);
+                    add_node(compress_ipaddr_t(&uip_ds6_routing_table[i].ipaddr));
                   network[0].neighbor[k].rank = 0;
 
                   k++;

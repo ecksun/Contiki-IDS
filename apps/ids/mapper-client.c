@@ -28,8 +28,7 @@ tcpip_handler(void)
     // TODO Check that this is the right port (and perhaps proto?)
     uint8_t instance_id;
     uint8_t timestamp;
-    // TODO Compress DAG
-    uip_ipaddr_t dag_id;
+    uint16_t dag_id;
     uint8_t version;
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
     PRINTF("\n");
@@ -43,8 +42,8 @@ tcpip_handler(void)
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
         for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
           if (instance_table[i].dag_table[j].used &&
-              uip_ipaddr_cmp(&instance_table[i].dag_table[j].dag_id, &dag_id))
-          {
+              compress_ipaddr_t(&instance_table[i].dag_table[j].dag_id) ==
+              dag_id) {
             if (instance_table[i].dag_table[j].version != version) {
               PRINTF("Wrong RPL DODAG Version Number\n");
               return;

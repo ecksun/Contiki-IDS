@@ -274,7 +274,7 @@ void
 tcpip_handler()
 {
   uint8_t *appdata;
-  uint16_t src_id, parent_id;
+  uint16_t src_id, parent_id, dag_id;
   uint8_t rpl_instance_id, version_recieved, timestamp_recieved;
 
   struct Node *id, *parent;
@@ -307,13 +307,15 @@ tcpip_handler()
 
   MAPPER_GET_PACKETDATA(rpl_instance_id, appdata);
 
+  MAPPER_GET_PACKETDATA(dag_id, appdata);
+
   // TODO Compress DAG
-  if (!uip_ipaddr_cmp((uip_ipaddr_t *)appdata, &current_dag->dag_id)) {
+  if (dag_id != compress_ipaddr_t(&current_dag->dag_id)) {
     PRINTF("Mapping information recieved which does not match our current");
-    PRINTF("DODAG, information ignored\n");
+    PRINTF("DODAG, information ignored (got %x while expecting %x)\n", dag_id,
+        compress_ipaddr_t(&current_dag->dag_id));
     return;
   }
-  appdata += sizeof(uip_ipaddr_t); // DODAG ID
 
   MAPPER_GET_PACKETDATA(version_recieved, appdata);
   if (version_recieved != current_dag->version) {
@@ -379,13 +381,16 @@ map_network()
     ++working_host;
     return;
   }
+  // RPL Instance ID | DAG ID (compressed, uint16_t) | DAG Version | timestamp
   static char data[sizeof(current_rpl_instance_id) +
-    sizeof(current_dag->dag_id) + sizeof(current_dag->version) +
+    sizeof(uint16_t) + sizeof(current_dag->version) +
     sizeof(timestamp)];
   void *data_p = data;
+  uint16_t tmp;
 
   MAPPER_ADD_PACKETDATA(data_p, current_rpl_instance_id);
-  MAPPER_ADD_PACKETDATA(data_p, current_dag->dag_id);
+  tmp = compress_ipaddr_t(&current_dag->dag_id);
+  MAPPER_ADD_PACKETDATA(data_p, tmp);
   MAPPER_ADD_PACKETDATA(data_p, current_dag->version);
   MAPPER_ADD_PACKETDATA(data_p, timestamp);
 

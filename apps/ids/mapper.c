@@ -58,7 +58,7 @@ static int working_host = 0;
 /**
  * A timestamp to make sure mapping information recieved is recent.
  */
-static uint8_t timestamp = 0;
+static uint8_t timestamp = MAPPING_RECENT_WINDOW+1;
 
 /**
  * The current RPL instance id we are working with.
@@ -88,6 +88,11 @@ static int mapper_dag = 0;
  * When this timer goes of we will try to map the network further
  */
 static struct etimer map_timer;
+
+/**
+ * This timer is used to sleep between sending requests to individual hosts
+ */
+static struct etimer host_timer;
 
 /**
  * A temporary variable to ease workflow
@@ -126,6 +131,12 @@ struct Node {
    * The compressed IP of the node works as its ID
    */
   uint16_t id;
+
+  /**
+   * Timestamp of last recieved information update
+   */
+  uint8_t timestamp;
+
   /**
    * A pointer to this nodes parent, or NULL if none exists (that is, it is
    * either the root or uninitialized)
@@ -289,7 +300,6 @@ tcpip_handler()
   if (UIP_HTONS(UIP_UDP_BUF->destport) != MAPPER_SERVER_PORT)
     return;
 
-
   appdata = (uint8_t *) uip_appdata;
   MAPPER_GET_PACKETDATA(src_id, appdata);
 
@@ -309,7 +319,6 @@ tcpip_handler()
 
   MAPPER_GET_PACKETDATA(dag_id, appdata);
 
-  // TODO Compress DAG
   if (dag_id != compress_ipaddr_t(&current_dag->dag_id)) {
     PRINTF("Mapping information recieved which does not match our current");
     PRINTF("DODAG, information ignored (got %x while expecting %x)\n", dag_id,
@@ -329,6 +338,8 @@ tcpip_handler()
     PRINTF("got %d while expecting %d\n", timestamp_recieved, timestamp);
     return;
   }
+
+  id->timestamp = timestamp_recieved;
 
   // Rank
   MAPPER_GET_PACKETDATA(id->rank, appdata);
@@ -363,6 +374,31 @@ tcpip_handler()
 }
 
 /**
+ * Check a timestamp to se if it is to old or not
+ *
+ * This function takes into account over and underflows.
+ */
+int timestamp_outdated(uint8_t ts, uint8_t margin) {
+  uint8_t diff;
+  if (timestamp >= ts)
+    diff = timestamp - ts;
+  else
+    return 1; // Timestamp in future
+
+  if (diff > margin)
+    return 1;
+  else
+    return 0;
+}
+
+/**
+ * Check if a Node structure is valid and up to date
+ */
+int valid_node(struct Node * node) {
+  return timestamp_outdated(node->timestamp, MAPPING_RECENT_WINDOW*2);
+}
+
+/**
  * Send out an information request to all nodes in the network, one at the
  * time.
  *
@@ -373,35 +409,43 @@ tcpip_handler()
 void
 map_network()
 {
-  for(;
-      working_host < UIP_DS6_ROUTE_NB
-      && !uip_ds6_routing_table[working_host].isused; ++working_host);
+  struct Node * node = NULL;
+  for(; working_host < UIP_DS6_ROUTE_NB; ++working_host) {
+    if (!uip_ds6_routing_table[working_host].isused)
+      continue;
+    node = add_node(compress_ipaddr_t(&uip_ds6_routing_table[working_host].ipaddr));
 
-  if(!uip_ds6_routing_table[working_host].isused) {
-    ++working_host;
-    return;
+    if (node == NULL)
+      return;
+
+    if (timestamp_outdated(node->timestamp, MAPPING_RECENT_WINDOW))
+      break;
   }
-  // RPL Instance ID | DAG ID (compressed, uint16_t) | DAG Version | timestamp
-  static char data[sizeof(current_rpl_instance_id) +
-    sizeof(uint16_t) + sizeof(current_dag->version) +
-    sizeof(timestamp)];
-  void *data_p = data;
-  uint16_t tmp;
 
-  MAPPER_ADD_PACKETDATA(data_p, current_rpl_instance_id);
-  tmp = compress_ipaddr_t(&current_dag->dag_id);
-  MAPPER_ADD_PACKETDATA(data_p, tmp);
-  MAPPER_ADD_PACKETDATA(data_p, current_dag->version);
-  MAPPER_ADD_PACKETDATA(data_p, timestamp);
+  if (uip_ds6_routing_table[working_host].isused &&
+      timestamp_outdated(node->timestamp, MAPPING_RECENT_WINDOW)) {
+    // RPL Instance ID | DAG ID (compressed, uint16_t) | DAG Version | timestamp
+    static char data[sizeof(current_rpl_instance_id) +
+      sizeof(uint16_t) + sizeof(current_dag->version) +
+      sizeof(timestamp)];
+    void *data_p = data;
+    uint16_t tmp;
 
-  add_node(compress_ipaddr_t(&uip_ds6_routing_table[working_host].ipaddr));
+    MAPPER_ADD_PACKETDATA(data_p, current_rpl_instance_id);
+    tmp = compress_ipaddr_t(&current_dag->dag_id);
+    MAPPER_ADD_PACKETDATA(data_p, tmp);
+    MAPPER_ADD_PACKETDATA(data_p, current_dag->version);
+    MAPPER_ADD_PACKETDATA(data_p, timestamp);
 
-  PRINTF("sending data to: %2d ", working_host);
-  PRINT6ADDR(&uip_ds6_routing_table[working_host].ipaddr);
-  PRINTF("\n");
-  uip_udp_packet_sendto(ids_conn, data, sizeof(data),
-                        &uip_ds6_routing_table[working_host++].ipaddr,
-                        UIP_HTONS(MAPPER_CLIENT_PORT));
+    PRINTF("sending data to: %2d ", working_host);
+    PRINT6ADDR(&uip_ds6_routing_table[working_host].ipaddr);
+    PRINTF("\n");
+    uip_udp_packet_sendto(ids_conn, data, sizeof(data),
+        &uip_ds6_routing_table[working_host].ipaddr,
+        UIP_HTONS(MAPPER_CLIENT_PORT));
+  }
+
+  ++working_host;
 
   if(working_host >= UIP_DS6_ROUTE_NB) {
     working_host = 0;
@@ -421,6 +465,8 @@ check_child_parent_relation()
 
   for(i = 0; i < node_index; ++i) {
     // Compare the parents rank to the one
+    if (!valid_node(&network[i]))
+      continue;
     if(network[i].rank < network[i].neighbor[network[i].parent_id].rank) {
       printf("ATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
       printf("Child: ");
@@ -444,9 +490,9 @@ check_child_parent_relation()
 void
 visit_tree(struct Node *node)
 {
-  int i;
+  int i = 0;
 
-  if(node->visited) {
+  if(node->visited || valid_node(node)) {
     return;
   }
   node->visited = 1;
@@ -480,9 +526,9 @@ missing_ids_info()
 
   for(i = 0; i < node_index; ++i) {
     if(!network[i].visited) {
-      printf("Node not found: ");
+      printf("Information for node ");
       uip_debug_ipaddr_print(network[i].ip);
-      printf("\n");
+      printf(" is either outdated or non-existent.\n");
       status = 1;
     }
   }
@@ -503,7 +549,6 @@ detect_inconsistencies()
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(mapper, ev, data)
 {
-  static struct etimer timer;
   int i, k;
 
   PROCESS_BEGIN();
@@ -514,6 +559,7 @@ PROCESS_THREAD(mapper, ev, data)
   memset(network, 0, sizeof(network));
 
   PRINTF("IDS Server, compile time: %s\n", __TIME__);
+  PRINTF("Mapping interval is %lu, hosts will be mapped with a %lu second delay\n", MAPPING_INTERVAL / CLOCK_SECOND, MAPPING_HOST_INTERVAL / CLOCK_SECOND);
 
   ids_conn = udp_new(NULL, UIP_HTONS(MAPPER_CLIENT_PORT), NULL);
   udp_bind(ids_conn, UIP_HTONS(MAPPER_SERVER_PORT));
@@ -523,8 +569,8 @@ PROCESS_THREAD(mapper, ev, data)
   PRINTF(" local/remote port %u/%u\n", UIP_HTONS(ids_conn->lport),
          UIP_HTONS(ids_conn->rport));
 
-  etimer_set(&timer, CLOCK_SECOND); // Wake up and send the next information request
-  etimer_set(&map_timer, 30 * CLOCK_SECOND); // Restart network mapping
+  etimer_set(&host_timer, MAPPING_HOST_INTERVAL); // Wake up and send the next information request
+  etimer_set(&map_timer, MAPPING_INTERVAL); // Restart network mapping
 
   // Add this node (root node) to the network graph
   network[0].ip = &uip_ds6_get_global(ADDR_PREFERRED)->ipaddr;
@@ -539,7 +585,7 @@ PROCESS_THREAD(mapper, ev, data)
     } else if(etimer_expired(&map_timer)) {
 
       // Map the next DAG.
-      if(working_host == 0) {
+      if(working_host == 0 && etimer_expired(&host_timer)) {
         print_graph();
         detect_inconsistencies();
 
@@ -574,6 +620,7 @@ PROCESS_THREAD(mapper, ev, data)
               }
             }
             network[0].neighbors = k;
+            network[0].timestamp = timestamp;
 
             goto found_network;
 
@@ -586,8 +633,10 @@ PROCESS_THREAD(mapper, ev, data)
       }
 
     found_network:
-      map_network();
-      etimer_reset(&timer);
+      if (etimer_expired(&host_timer)) {
+        map_network();
+        etimer_restart(&host_timer);
+      }
     }
   }
 

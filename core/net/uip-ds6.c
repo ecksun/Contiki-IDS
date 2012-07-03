@@ -815,8 +815,6 @@ uip_ds6_route_add(uip_ipaddr_t *ipaddr, uint8_t length, uip_ipaddr_t *nexthop,
     memset(&locroute->state, 0, sizeof(UIP_DS6_ROUTE_STATE_TYPE));
 #endif
 
-    print_routing_table();
-
     PRINTF("DS6: adding route: ");
     PRINT6ADDR(ipaddr);
     PRINTF(" via ");
@@ -846,7 +844,6 @@ uip_ds6_route_rm(uip_ds6_route_t *route)
   }
   ANNOTATE("#L %u 0\n",route->nexthop.u8[sizeof(uip_ipaddr_t) - 1]);
 #endif
-  print_routing_table();
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -860,7 +857,6 @@ uip_ds6_route_rm_by_nexthop(uip_ipaddr_t *nexthop)
     }
   }
   ANNOTATE("#L %u 0\n",nexthop->u8[sizeof(uip_ipaddr_t) - 1]);
-  print_routing_table();
 }
 
 /*---------------------------------------------------------------------------*/

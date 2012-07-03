@@ -42,7 +42,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/uip-debug.h"
 
 /**
@@ -201,7 +201,10 @@ find_node(uint16_t id)
  * This function will go through the routing table and add a pointer to the IP
  * in the routing table, in order to save memory.
  *
- * @return A pointer to the new node or NULL if we ran out of memory
+ * The function will return NULL if either we ran out of memory or if we
+ * couldnt find the IP-adress in our routing table.
+ *
+ * @return A pointer to the new node or NULL if an error occured.
  */
 struct Node *
 add_node(uint16_t id)
@@ -211,10 +214,11 @@ add_node(uint16_t id)
   if(node != NULL)
     return node;
 
-  if(node_index >= NETWORK_NODES)       // Out of memory
+  if(node_index >= NETWORK_NODES) {     // Out of memory
+    PRINTF("Out of memory\n");
     return NULL;
+  }
 
-  PRINTF("Creating new node with ID: %x\n", id);
   int i;
 
   // Find the IP in the routing table, we want our records to point to them in
@@ -226,6 +230,10 @@ add_node(uint16_t id)
     if(compress_ipaddr_t(&uip_ds6_routing_table[i].ipaddr) == id) {
       network[node_index].ip = &uip_ds6_routing_table[i].ipaddr;
       network[node_index].id = compress_ipaddr_t(network[node_index].ip);
+
+      PRINTF("Creating new node with IP: ");
+      PRINT6ADDR(network[node_index].ip);
+      PRINTF(" (%x)\n", id);
       return &network[node_index++];
     }
   }
@@ -415,8 +423,9 @@ map_network()
       continue;
     node = add_node(compress_ipaddr_t(&uip_ds6_routing_table[working_host].ipaddr));
 
+    // If an error, just ignore the node
     if (node == NULL)
-      return;
+      continue;
 
     if (timestamp_outdated(node->timestamp, MAPPING_RECENT_WINDOW))
       break;

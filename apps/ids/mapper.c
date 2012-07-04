@@ -58,7 +58,7 @@ static int working_host = 0;
 /**
  * A timestamp to make sure mapping information recieved is recent.
  */
-static uint8_t timestamp = MAPPING_RECENT_WINDOW+1;
+static uint8_t timestamp = MAPPING_RECENT_WINDOW;
 
 /**
  * The current RPL instance id we are working with.
@@ -534,6 +534,7 @@ detect_inconsistencies()
 PROCESS_THREAD(mapper, ev, data)
 {
   int i, k;
+  static int init = 1;
 
   PROCESS_BEGIN();
 
@@ -573,7 +574,9 @@ PROCESS_THREAD(mapper, ev, data)
 #if (DEBUG) & DEBUG_PRINT
         print_graph();
 #endif
-        detect_inconsistencies();
+        if (init == 0)
+          detect_inconsistencies();
+        init = 0;
 
         // This will overflow, thats OK (and well-defined as it is unsigned)
         ++timestamp;

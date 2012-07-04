@@ -42,7 +42,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
 /**
@@ -256,7 +256,7 @@ print_subtree(struct Node *node, int depth)
   }
   node->visited = 1;
 
-  printf(" (%d) ", node->parent_id);
+  printf(" (t: %d, p: %x, r: %d) ", node->timestamp, node->parent->id, node->rank);
 
   printf("    {");
 
@@ -280,7 +280,7 @@ print_graph()
   for(i = 0; i < node_index; ++i) {
     network[i].visited = 0;
   }
-  printf("Network graph:\n\n");
+  printf("Network graph at timestamp %d:\n\n", timestamp);
   print_subtree(&network[0], 0);
   for(i = 0; i < node_index; ++i) {
     if(!network[i].visited)
@@ -403,7 +403,8 @@ int timestamp_outdated(uint8_t ts, uint8_t margin) {
  * Check if a Node structure is valid and up to date
  */
 int valid_node(struct Node * node) {
-  return timestamp_outdated(node->timestamp, MAPPING_RECENT_WINDOW*2);
+  return node->timestamp != 0 && !timestamp_outdated(node->timestamp,
+      MAPPING_RECENT_WINDOW*2);
 }
 
 /**
@@ -469,47 +470,25 @@ map_network()
 int
 check_child_parent_relation()
 {
-  int status = 1;
+  int status = 0;
   int i;
 
   for(i = 0; i < node_index; ++i) {
     // Compare the parents rank to the one
     if (!valid_node(&network[i]))
       continue;
-    if(network[i].rank < network[i].neighbor[network[i].parent_id].rank) {
-      printf("ATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
-      printf("Child: ");
+    if(network[i].rank < network[i].neighbor[network[i].parent_id].rank +
+        rpl_get_instance(current_rpl_instance_id)->min_hoprankinc) {
+      printf("One of the following nodes has advertised a incorrect route, this is likley an attack:\n");
       uip_debug_ipaddr_print(network[i].ip);
-      printf(" parent: ");
+      printf("\n");
       uip_debug_ipaddr_print(network[i].neighbor[network[i].parent_id].node->
                              ip);
-      printf("\nATTACK ATTACK ATTACK: SOMEONE IS MESSING ABOUT!!!\n");
-      status = 0;
+      printf("\n");
+      status = 1;
     }
   }
   return status;
-}
-
-/**
- * Visit all nodes in the given subtree
- *
- * This will only look at nodes which is indirectly a child to the given node.
- * All neighbors of a node is visited who also have that node as their parent.
- */
-void
-visit_tree(struct Node *node)
-{
-  int i = 0;
-
-  if(node->visited || valid_node(node)) {
-    return;
-  }
-  node->visited = 1;
-
-  for(i = 0; i < node->neighbors; ++i) {
-    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->ip, node->ip))
-      visit_tree(node->neighbor[i].node);
-  }
 }
 
 /**
@@ -526,21 +505,17 @@ missing_ids_info()
   int i;
   int status = 0;
 
-  for(i = 0; i < node_index; ++i) {
-    network[i].visited = 0;
-  }
-
-  // Traverse the tree starting at the root
-  visit_tree(&network[0]);
-
-  for(i = 0; i < node_index; ++i) {
-    if(!network[i].visited) {
-      printf("Information for node ");
+  for (i = 0; i < node_index; ++i) {
+    if (!valid_node(&network[i])) {
+      if (status == 0)
+        printf("The following list of nodes either have outdated or non-exsistent information: \n");
       uip_debug_ipaddr_print(network[i].ip);
-      printf(" is either outdated or non-existent.\n");
+      printf("\n");
+
       status = 1;
     }
   }
+
   return status;
 }
 
@@ -595,7 +570,9 @@ PROCESS_THREAD(mapper, ev, data)
 
       // Map the next DAG.
       if(working_host == 0 && etimer_expired(&host_timer)) {
+#if (DEBUG) & DEBUG_PRINT
         print_graph();
+#endif
         detect_inconsistencies();
 
         // This will overflow, thats OK (and well-defined as it is unsigned)
@@ -607,6 +584,7 @@ PROCESS_THREAD(mapper, ev, data)
           for(; mapper_dag < RPL_MAX_DAG_PER_INSTANCE; ++mapper_dag) {
             if(!instance_table[mapper_instance].dag_table[mapper_dag].used)
               continue;
+            network[0].rank = instance_table[mapper_instance].min_hoprankinc;
 
             current_rpl_instance_id =
               instance_table[mapper_instance].instance_id;

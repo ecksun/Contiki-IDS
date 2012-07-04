@@ -355,7 +355,7 @@
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter>ID:1</filter>
+      <filter>ID:1 </filter>
       <hidedebug />
     </plugin_config>
     <width>874</width>

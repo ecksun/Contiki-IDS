@@ -49,7 +49,7 @@
 #include "collect-common.h"
 #include "collect-view.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
@@ -90,7 +90,7 @@ collect_common_set_sink(void)
 void
 collect_common_net_print(void)
 {
-  printf("I am sink!\n");
+  PRINTF("I am sink!\n");
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -183,19 +183,13 @@ void send_ping(uip_ipaddr_t * dest_addr)
   UIP_ICMP_BUF->icmpchksum = 0;
   UIP_ICMP_BUF->icmpchksum = ~uip_icmp6chksum();
 
-
-  // PRINTF("Sending Echo Request to ");
-  // PRINT6ADDR(&UIP_IP_BUF->destipaddr);
-  // PRINTF(" from ");
-  // PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
-  // PRINTF("\n");
   UIP_STAT(++uip_stat.icmp.sent);
 
   ids_info = find_info(dest_addr);
   if (ids_info == NULL) {
-    printf("No request sent for this packet from ");
-    uip_debug_ipaddr_print(dest_addr);
-    printf("\n");
+    PRINTF("No request sent for this packet from ");
+    PRINT6ADDR(dest_addr);
+    PRINTF("\n");
   }
   else {
     ids_info->outstanding_echos++;
@@ -229,9 +223,11 @@ tcpip_handler(void)
   rimeaddr_t sender;
   uint8_t seqno;
   uint8_t hops;
+#if DEBUG & DEBUG_PRINT
   int i;
   int len;
   uip_ipaddr_t ip_recieved;
+#endif
 
   if (uip_newdata()) {
 
@@ -241,8 +237,9 @@ tcpip_handler(void)
     seqno = *appdata;
     hops = uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;
 
+#if DEBUG & DEBUG_PRINT
     if (UIP_HTONS(UIP_UDP_BUF->destport) == CONTROL_CHAN_SERVER_PORT) {
-      printf("Got a message on the control channel!\n");
+      PRINTF("Got a message on the control channel!\n");
       // appdata += 2;
       len = uip_datalen();
 
@@ -278,6 +275,7 @@ tcpip_handler(void)
 
       return;
     }
+#endif
 
     collect_common_recv(&sender, seqno, hops,
                         appdata + 2, uip_datalen() - 2);
@@ -288,13 +286,10 @@ tcpip_handler(void)
 void handle_reply(void) {
   struct ids_host_info * ids_info = find_info(&UIP_IP_BUF->srcipaddr);
   if (ids_info == NULL) {
-    printf("Sending to host that doesnt exist, this shouldnt happen\n");
+    PRINTF("Sending to host that doesnt exist, this shouldnt happen\n");
     add_ip(&UIP_IP_BUF->srcipaddr);
   }
   else {
-    // printf("Got pong from ");
-    // uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
-    // printf("\n");
     ids_info->outstanding_echos--;
   }
 }

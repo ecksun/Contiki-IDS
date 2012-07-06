@@ -1,0 +1,4 @@
+ids-client_src = ids-client.c mapper-client.c
+
+APPS += ids-common
+include $(CONTIKI)/apps/ids-common/Makefile.ids-common

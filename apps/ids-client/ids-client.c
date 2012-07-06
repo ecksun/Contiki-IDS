@@ -1,3 +1,4 @@
+#include "ids-client.h"
 #include "ids-common.h"
 
 #include "net/uip.h"
@@ -13,10 +14,6 @@
 
 extern uip_ds6_route_t uip_ds6_routing_table[];
 extern uip_ds6_defrt_t uip_ds6_defrt_list[];
-
-void make_ipaddr_global(uip_ipaddr_t * ip) {
-  ip->u16[0] = 0xaaaa;
-}
 
 void packet_lost(uip_ipaddr_t * dest) {
   PRINTF("Packet lost on route to");
@@ -69,9 +66,3 @@ void packet_lost(uip_ipaddr_t * dest) {
   PRINTF("Updated metric from %d to %d\n", old_metric, *metric);
 }
 
-uint16_t compress_ipaddr_t(uip_ipaddr_t * ipaddr) {
-  PRINTF("Compressing ");
-  PRINT6ADDR(ipaddr);
-  PRINTF(" to %x\n", ipaddr->u16[7]);
-  return ipaddr->u16[7];
-}

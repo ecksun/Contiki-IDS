@@ -45,12 +45,6 @@
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
-// Should not be nescesary, blaming strange build system
-void collect_common_set_sink(void) {}
-void collect_common_net_print(void) {}
-void collect_common_send(void) {}
-void collect_common_net_init(void) {}
-
 PROCESS(network_mapper, "IDS Server router");
 AUTOSTART_PROCESSES(&network_mapper, &mapper);
 

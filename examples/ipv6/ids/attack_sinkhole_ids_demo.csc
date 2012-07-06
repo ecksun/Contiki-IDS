@@ -24,9 +24,9 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
       <description>Sky Mote Type #sky1</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/rpl-collect/network-mapper.c</source>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/ids/ids-server/network-mapper.c</source>
       <commands EXPORT="discard">make network-mapper.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/rpl-collect/network-mapper.sky</firmware>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/ids/ids-server/network-mapper.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>
@@ -47,9 +47,9 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky2</identifier>
       <description>Sky Mote Type #sky2</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/rpl-collect/udp-sender.c</source>
-      <commands EXPORT="discard">make udp-sender.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/rpl-collect/udp-sender.sky</firmware>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/ids/ids-client/network-mapper-client.c</source>
+      <commands EXPORT="discard">make network-mapper-client.sky TARGET=sky</commands>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/ids/ids-client/network-mapper-client.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>

@@ -26,12 +26,6 @@
 #define MAPPER_GET_PACKETDATA(dest, source) \
   memcpy(&dest, source, sizeof(dest)); source += sizeof(dest)
 
-/**
- * Indicate to the IDS that a packet was lost while trying to transmitt to the
- * specificed destination
- */
-void packet_lost(uip_ipaddr_t * dest);
-
 void make_ipaddr_global(uip_ipaddr_t *);
 
 uint16_t compress_ipaddr_t(uip_ipaddr_t *);

@@ -1,3 +1,4 @@
+#include "ids-client.h"
 #include "ids-common.h"
 
 #include "contiki.h"

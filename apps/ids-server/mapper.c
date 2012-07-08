@@ -45,6 +45,8 @@
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
+#define INCONSISTENCY_THREASHOLD 2
+
 /**
  * Connection for incoming IDS information packets
  */
@@ -98,6 +100,11 @@ static struct etimer host_timer;
  * A temporary variable to ease workflow
  */
 static uip_ipaddr_t tmp_ip;
+
+/**
+ * A temporary variable
+ */
+static uint8_t temporary;
 
 PROCESS(mapper, "IDS network mapper");
 AUTOSTART_PROCESSES(&mapper);
@@ -519,15 +526,106 @@ missing_ids_info()
   return status;
 }
 
+int correct_rank_inconsistencies(void) {
+  int i,j;
+  int inconsistencies = 0;
+
+  // We will use the visited status variable to count the number of
+  // missbehaviours that have occured for a certain node
+  for (i = 0; i < node_index; ++i)
+    network[i].visited = 0;
+
+  // We do not care about the roots neighboring ranks, if the node is lying
+  // about its rank to the root it is off little use to check the validity of
+  // it as its claimd rank will correspond to the rank it is reporting.
+
+  for (i = 1; i < node_index; ++i) {
+    // If we havent gotten any information for this node, ignore it
+    if (!valid_node(&network[i]))
+      continue;
+
+    for (j = 0; j < network[i].neighbors; ++j) {
+      // If we havent gotten any information from this neighbor, ignore it
+      if (!valid_node(network[i].neighbor[j].node) ||
+          network[i].neighbor[j].node == &network[0])
+        continue;
+
+      // We have an inconsistency
+      if (network[i].neighbor[j].rank != network[i].neighbor[j].node->rank) {
+        PRINTF("Node %d is claiming node %d has rank %d, while it claims it has %d\n",
+            (uint8_t) network[i].id, (uint8_t) network[i].neighbor[j].node->id,
+            network[i].neighbor[j].rank, network[i].neighbor[j].node->rank);
+        network[i].visited++;
+        network[i].neighbor[j].node->visited++;
+      }
+    }
+  }
+
+  for (i = 0; i < node_index; ++i) {
+    if (network[i].visited > INCONSISTENCY_THREASHOLD) {
+      printf("Node %x is probably lying about ranks\n", network[i].id);
+      inconsistencies = 1;
+      // The correction will fail here if no neighbors are reported by the
+      // lying node
+
+
+      // Update the rank of the lying node with the information from one of its
+      // neighbors. The neighbor choosen is more or less random, we will try to
+      // correct with the ranks from different neighbors a couple of times.
+
+      if (temporary >= network[i].neighbors)
+        temporary = 0;
+      for (; temporary < network[i].neighbors; ++temporary) {
+        if (network[i].neighbor[temporary].node->id == network[0].id)
+          continue;
+        if (network[i].neighbor[temporary].node->visited > INCONSISTENCY_THREASHOLD)
+          continue;
+        break;
+      }
+      struct Node * neighbor = network[i].neighbor[temporary].node;
+      for (j = 0; j < neighbor->neighbors; ++j) {
+        if (neighbor->neighbor[j].node->id == network[i].id) {
+          network[i].rank = neighbor->neighbor[j].rank;
+          break;
+        }
+      }
+
+      // As we do not trust this node, overwrite the neighboring information
+      // with the info from the nodes we do trust
+      for (j = 0; j < network[i].neighbors; ++j) {
+        if (network[i].neighbor[j].node->visited <= INCONSISTENCY_THREASHOLD)
+          network[i].neighbor[j].rank = network[i].neighbor[j].node->rank;
+      }
+
+      PRINTF("Overwriting rank with most common: %d\n", network[i].rank);
+      ++temporary;
+    }
+  }
+  return inconsistencies;
+}
+
+int detect_correct_rank_inconsistencies(void) {
+  int status = 0;
+  int i;
+  temporary = 0;
+  // Run the correction a couple of times to be correct for several faults.
+  for (i = 0; i < 3; ++i) {
+    status = 1;
+    if (!correct_rank_inconsistencies())
+      break;
+  }
+  return status;
+}
+
 /**
  * Run the intrusion detection rules
  */
 void
 detect_inconsistencies()
 {
+  detect_correct_rank_inconsistencies();
   check_child_parent_relation();
   missing_ids_info();
-  // TODO Check if any node is lying about its rank
 }
 
 /*---------------------------------------------------------------------------*/

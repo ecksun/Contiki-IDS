@@ -33,6 +33,7 @@
 #include "net/uip.h"
 #include "net/rpl/rpl.h"
 #include "net/rime/rimeaddr.h"
+#include "random.h"
 
 #include "ids-central.h"
 
@@ -104,11 +105,6 @@ static struct etimer host_timer;
  * A temporary variable to ease workflow
  */
 static uip_ipaddr_t tmp_ip;
-
-/**
- * A temporary variable
- */
-static uint8_t temporary;
 
 PROCESS(mapper, "IDS network mapper");
 AUTOSTART_PROCESSES(&mapper);
@@ -488,9 +484,15 @@ check_child_parent_relation()
     // Compare the parents rank to the one
     if (!valid_node(&network[i]))
       continue;
+
+    // // We use a 10% margin
+    // if(network[i].rank + network[i].rank/10 <
+        // network[i].neighbor[network[i].parent_id].rank +
+        // rpl_get_instance(current_rpl_instance_id)->min_hoprankinc) {
+
     if(network[i].rank < network[i].neighbor[network[i].parent_id].rank +
         rpl_get_instance(current_rpl_instance_id)->min_hoprankinc) {
-      printf("One of the following nodes has advertised a incorrect route, this is likley an attack:\n");
+      printf("The following nodes has advertised incorrect routes:\n");
       uip_debug_ipaddr_print(network[i].ip);
       printf("\n");
       uip_debug_ipaddr_print(network[i].neighbor[network[i].parent_id].node->
@@ -572,21 +574,12 @@ int correct_rank_inconsistencies(void) {
       // The correction will fail here if no neighbors are reported by the
       // lying node
 
-
       // Update the rank of the lying node with the information from one of its
-      // neighbors. The neighbor choosen is more or less random, we will try to
-      // correct with the ranks from different neighbors a couple of times.
+      // neighbors. The neighbor choosen is random, we will try to correct with
+      // the ranks from different neighbors a couple of times.
 
-      if (temporary >= network[i].neighbors)
-        temporary = 0;
-      for (; temporary < network[i].neighbors; ++temporary) {
-        if (network[i].neighbor[temporary].node->id == network[0].id)
-          continue;
-        if (network[i].neighbor[temporary].node->visited > INCONSISTENCY_THREASHOLD)
-          continue;
-        break;
-      }
-      struct Node * neighbor = network[i].neighbor[temporary].node;
+      struct Node * neighbor = network[i].neighbor[random_rand() %
+        (network[i].neighbors-1)+1].node;
       for (j = 0; j < neighbor->neighbors; ++j) {
         if (neighbor->neighbor[j].node->id == network[i].id) {
           network[i].rank = neighbor->neighbor[j].rank;
@@ -602,7 +595,6 @@ int correct_rank_inconsistencies(void) {
       }
 
       PRINTF("Overwriting rank with most common: %d\n", network[i].rank);
-      ++temporary;
     }
   }
   return inconsistencies;
@@ -611,12 +603,11 @@ int correct_rank_inconsistencies(void) {
 int detect_correct_rank_inconsistencies(void) {
   int status = 0;
   int i;
-  temporary = 0;
   // Run the correction a couple of times to be correct for several faults.
-  for (i = 0; i < 3; ++i) {
-    status = 1;
+  for (i = 0; i < 2; ++i) {
     if (!correct_rank_inconsistencies())
       break;
+    status = 1;
   }
   return status;
 }

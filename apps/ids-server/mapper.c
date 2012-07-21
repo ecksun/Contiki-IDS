@@ -33,7 +33,6 @@
 #include "net/uip.h"
 #include "net/rpl/rpl.h"
 #include "net/rime/rimeaddr.h"
-#include "random.h"
 
 #include "ids-central.h"
 
@@ -169,6 +168,12 @@ struct Node {
    * A status variable, used to help traversing the network graph and such.
    */
   uint8_t visited;
+
+  /**
+   * The status of the current node, a set of bits which indicate the state
+   * between analysis for different checks
+   */
+  uint8_t status;
 };
 
 /**
@@ -481,7 +486,6 @@ check_child_parent_relation()
   int i;
 
   for(i = 0; i < node_index; ++i) {
-    // Compare the parents rank to the one
     if (!valid_node(&network[i]))
       continue;
 
@@ -492,13 +496,34 @@ check_child_parent_relation()
 
     if(network[i].rank < network[i].neighbor[network[i].parent_id].rank +
         rpl_get_instance(current_rpl_instance_id)->min_hoprankinc) {
-      printf("The following nodes has advertised incorrect routes:\n");
+      network[i].status |= IDS_TEMP_ERROR;
+      network[i].neighbor[network[i].parent_id].node->status |= IDS_TEMP_ERROR;
+
+    }
+  }
+  for(i = 0; i < node_index; ++i) {
+    if (!valid_node(&network[i]))
+      continue;
+
+    if((network[i].status & (IDS_TEMP_ERROR | IDS_RELATIVE_ERROR)) ==
+        (IDS_TEMP_ERROR | IDS_RELATIVE_ERROR)) {
+      if (status == 0)
+        printf("The following nodes has advertised incorrect routes:\n");
+
       uip_debug_ipaddr_print(network[i].ip);
-      printf("\n");
-      uip_debug_ipaddr_print(network[i].neighbor[network[i].parent_id].node->
-                             ip);
-      printf("\n");
+      printf(" (%d)\n", network[i].rank);
       status = 1;
+    }
+  }
+  for(i = 0; i < node_index; ++i) {
+    if (network[i].status & IDS_TEMP_ERROR) {
+      // Promote the temporary error to a saved error
+      network[i].status |= IDS_RELATIVE_ERROR;
+      network[i].status &= ~IDS_TEMP_ERROR;
+    }
+    else {
+      // Reset if we didnt see a repeat offence
+      network[i].status &= ~IDS_RELATIVE_ERROR;
     }
   }
   return status;
@@ -533,7 +558,7 @@ missing_ids_info()
 }
 
 int correct_rank_inconsistencies(void) {
-  int i,j;
+  int i,j,k;
   int inconsistencies = 0;
 
   // We will use the visited status variable to count the number of
@@ -557,10 +582,20 @@ int correct_rank_inconsistencies(void) {
         continue;
 
       // We have an inconsistency
-      if (network[i].neighbor[j].rank != network[i].neighbor[j].node->rank) {
+
+      int diff;
+      if (network[i].neighbor[j].node->rank > network[i].neighbor[j].rank)
+        diff = network[i].neighbor[j].node->rank - network[i].neighbor[j].rank;
+      else
+        diff = network[i].neighbor[j].rank - network[i].neighbor[j].node->rank ;
+
+      // If the absolute difference is > 20% of the ranks averages.
+      // (r1+r2)/2*0.2 => (r1+r2)/10
+      if (diff > (network[i].neighbor[j].rank + network[i].neighbor[j].node->rank)/10) {
         PRINTF("Node %d is claiming node %d has rank %d, while it claims it has %d\n",
             (uint8_t) network[i].id, (uint8_t) network[i].neighbor[j].node->id,
             network[i].neighbor[j].rank, network[i].neighbor[j].node->rank);
+
         network[i].visited++;
         network[i].neighbor[j].node->visited++;
       }
@@ -569,23 +604,40 @@ int correct_rank_inconsistencies(void) {
 
   for (i = 0; i < node_index; ++i) {
     if (network[i].visited > INCONSISTENCY_THREASHOLD) {
-      printf("Node %x is probably lying about ranks\n", network[i].id);
+      PRINTF("Rank inconsistency: ");
+      PRINT6ADDR(network[i].ip);
+      PRINTF("\n");
+      network[i].status |= IDS_TEMP_ERROR;
+    }
+  }
+  for (i = 0; i < node_index; ++i) {
+    if ((network[i].status & (IDS_TEMP_ERROR | IDS_RANK_ERROR)) ==
+        (IDS_TEMP_ERROR | IDS_RANK_ERROR)) {
+      if (inconsistencies == 0)
+        printf("The following nodes are lying about their rank:\n");
+      uip_debug_ipaddr_print(network[i].ip);
+      printf("\n");
       inconsistencies = 1;
-      // The correction will fail here if no neighbors are reported by the
-      // lying node
 
       // Update the rank of the lying node with the information from one of its
-      // neighbors. The neighbor choosen is random, we will try to correct with
-      // the ranks from different neighbors a couple of times.
+      // neighbors.
 
-      struct Node * neighbor = network[i].neighbor[random_rand() %
-        (network[i].neighbors-1)+1].node;
-      for (j = 0; j < neighbor->neighbors; ++j) {
-        if (neighbor->neighbor[j].node->id == network[i].id) {
-          network[i].rank = neighbor->neighbor[j].rank;
-          break;
+      struct Node * neighbor = NULL;
+      for (k = 0; k < network[i].neighbors; ++k) {
+        for (j = 0; j < network[i].neighbor[k].node->neighbors; ++j) {
+          if (network[i].neighbor[k].node->neighbor[j].node->id == network[i].id) {
+            neighbor = network[i].neighbor[k].node;
+            network[i].rank = neighbor->neighbor[j].rank;
+            break;
+          }
         }
       }
+      if (neighbor == NULL) {
+        PRINTF("Could not correct ranks\n");
+        continue;
+      }
+
+      PRINTF("Updating information with info from node %x\n", neighbor->id);
 
       // As we do not trust this node, overwrite the neighboring information
       // with the info from the nodes we do trust
@@ -594,7 +646,7 @@ int correct_rank_inconsistencies(void) {
           network[i].neighbor[j].rank = network[i].neighbor[j].node->rank;
       }
 
-      PRINTF("Overwriting rank with most common: %d\n", network[i].rank);
+      PRINTF("New rank: %d\n", network[i].rank);
     }
   }
   return inconsistencies;
@@ -603,11 +655,18 @@ int correct_rank_inconsistencies(void) {
 int detect_correct_rank_inconsistencies(void) {
   int status = 0;
   int i;
-  // Run the correction a couple of times to be correct for several faults.
-  for (i = 0; i < 2; ++i) {
-    if (!correct_rank_inconsistencies())
-      break;
-    status = 1;
+  status = correct_rank_inconsistencies();
+
+  for (i = 0; i < node_index; ++i) {
+    if (network[i].status & IDS_TEMP_ERROR) {
+      // Promote the temporary error to a saved error
+      network[i].status |= IDS_RANK_ERROR;
+      network[i].status &= ~IDS_TEMP_ERROR;
+    }
+    else {
+      // Reset if we didnt see a repeat offence
+      network[i].status &= ~IDS_RANK_ERROR;
+    }
   }
   return status;
 }

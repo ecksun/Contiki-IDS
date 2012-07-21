@@ -66,8 +66,11 @@ tcpip_handler(void)
 
             rpl_parent_t *p;
             for(p = list_head(instance_table[i].dag_table[j].parents);
-                p != NULL; p = list_item_next(p))
+                p != NULL; p = list_item_next(p)) {
+              if (p->rank == -1)
+                continue;
               outdata_size += sizeof(uint16_t) + sizeof(rpl_rank_t);
+            }
 
             unsigned char out_data[outdata_size];
             unsigned char * out_data_p = out_data;
@@ -104,6 +107,8 @@ tcpip_handler(void)
 
             for(p = list_head(instance_table[i].dag_table[j].parents); p !=
                 NULL; p = list_item_next(p)) {
+              if (p->rank == -1)
+                continue;
               ++(*neighbors);
               tmp_id = compress_ipaddr_t(&p->addr);
               MAPPER_ADD_PACKETDATA(out_data_p, tmp_id);

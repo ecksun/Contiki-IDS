@@ -613,10 +613,6 @@ int correct_rank_inconsistencies(void) {
   for (i = 0; i < node_index; ++i) {
     if ((network[i].status & (IDS_TEMP_ERROR | IDS_RANK_ERROR)) ==
         (IDS_TEMP_ERROR | IDS_RANK_ERROR)) {
-      if (inconsistencies == 0)
-        printf("The following nodes are lying about their rank:\n");
-      uip_debug_ipaddr_print(network[i].ip);
-      printf("\n");
       inconsistencies = 1;
 
       // Update the rank of the lying node with the information from one of its

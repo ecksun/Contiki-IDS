@@ -47,6 +47,10 @@
 
 #define INCONSISTENCY_THREASHOLD 2
 
+#define IDS_TEMP_ERROR 0x01
+#define IDS_RANK_ERROR 0x02
+#define IDS_RELATIVE_ERROR 0x04
+
 /**
  * Connection for incoming IDS information packets
  */

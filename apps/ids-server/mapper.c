@@ -607,12 +607,6 @@ int correct_rank_inconsistencies(void) {
       PRINTF("Rank inconsistency: ");
       PRINT6ADDR(network[i].ip);
       PRINTF("\n");
-      network[i].status |= IDS_TEMP_ERROR;
-    }
-  }
-  for (i = 0; i < node_index; ++i) {
-    if ((network[i].status & (IDS_TEMP_ERROR | IDS_RANK_ERROR)) ==
-        (IDS_TEMP_ERROR | IDS_RANK_ERROR)) {
       inconsistencies = 1;
 
       // Update the rank of the lying node with the information from one of its

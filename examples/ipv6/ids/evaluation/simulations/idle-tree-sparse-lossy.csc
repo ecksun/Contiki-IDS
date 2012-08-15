@@ -6,7 +6,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/serial_socket</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
-    <title>Collect-tree sparse lossy</title>
+    <title>Plain RPL - sparse lossy</title>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>

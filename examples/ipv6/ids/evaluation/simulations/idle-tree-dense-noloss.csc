@@ -7,7 +7,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/collect-view</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
-    <title>Collect tree dense noloss</title>
+    <title>Plain RPL - dense noloss</title>
     <randomseed>123457</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2011, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,52 +27,22 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __PROJECT_CONF_H__
-#define __PROJECT_CONF_H__
+/**
+ * \file
+ *         Sets up some commands for the border router
+ * \author
+ *         Niclas Finne <nfi@sics.se>
+ *         Joakim Eriksson <joakime@sics.se>
+ */
 
-#define CSMA_CONF_MAX_NEIGHBOR_QUEUES 4
+#ifndef __BORDER_ROUTER_CMDS_H__
+#define __BORDER_ROUTER_CMDS_H__
 
-#undef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          4
+#define CMD_CONTEXT_RADIO  0
+#define CMD_CONTEXT_STDIO  1
 
-#undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    140
+extern uint8_t command_context;
 
-#undef UIP_CONF_ROUTER
-#define UIP_CONF_ROUTER                 0
+PROCESS_NAME(border_router_cmd_process);
 
-#undef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL               0
-
-#define CMD_CONF_OUTPUT slip_radio_cmd_output
-
-/* add the cmd_handler_cc2420 + some sensors if TARGET_SKY */
-#ifdef CONTIKI_TARGET_SKY
-#define CMD_CONF_HANDLERS slip_radio_cmd_handler,cmd_handler_cc2420
-#define SLIP_RADIO_CONF_SENSORS slip_radio_sky_sensors
-#else
-#define CMD_CONF_HANDLERS slip_radio_cmd_handler
-#endif
-
-
-/* configuration for the slipradio/network driver */
-#undef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     nullmac_driver
-
-#undef NETSTACK_CONF_RDC
-/* #define NETSTACK_CONF_RDC     nullrdc_noframer_driver */
-#define NETSTACK_CONF_RDC     contikimac_driver
-
-#undef NETSTACK_CONF_NETWORK
-#define NETSTACK_CONF_NETWORK slipnet_driver
-
-#undef NETSTACK_CONF_FRAMER
-#define NETSTACK_CONF_FRAMER no_framer
-
-#undef CC2420_CONF_AUTOACK
-#define CC2420_CONF_AUTOACK              1
-
-#undef UART1_CONF_RX_WITH_DMA
-#define UART1_CONF_RX_WITH_DMA           1
-
-#endif /* __PROJECT_CONF_H__ */
+#endif /* __BORDER_ROUTER_CMDS_H__ */

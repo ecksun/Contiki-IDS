@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2011, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,52 +27,33 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __PROJECT_CONF_H__
-#define __PROJECT_CONF_H__
+/**
+ * \file
+ *         Border router header file
+ * \author
+ *         Joakim Eriksson <joakime@sics.se>
+ */
 
-#define CSMA_CONF_MAX_NEIGHBOR_QUEUES 4
+#ifndef __BORDER_ROUTER_H__
+#define __BORDER_ROUTER_H__
 
-#undef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          4
+#include "contiki.h"
+#include "net/uip.h"
+#include <stdio.h>
 
-#undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    140
+int border_router_cmd_handler(const uint8_t *data, int len);
+int slip_config_handle_arguments(int argc, char **argv);
+void write_to_slip(const uint8_t *buf, int len);
 
-#undef UIP_CONF_ROUTER
-#define UIP_CONF_ROUTER                 0
+void border_router_set_prefix_64(const uip_ipaddr_t *prefix_64);
+void border_router_set_mac(const uint8_t *data);
+void border_router_set_sensors(const char *data, int len);
+void border_router_print_stat(void);
 
-#undef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL               0
+void tun_init(void);
 
-#define CMD_CONF_OUTPUT slip_radio_cmd_output
+int slip_init(void);
+int slip_set_fd(int maxfd, fd_set *rset, fd_set *wset);
+void slip_handle_fd(fd_set *rset, fd_set *wset);
 
-/* add the cmd_handler_cc2420 + some sensors if TARGET_SKY */
-#ifdef CONTIKI_TARGET_SKY
-#define CMD_CONF_HANDLERS slip_radio_cmd_handler,cmd_handler_cc2420
-#define SLIP_RADIO_CONF_SENSORS slip_radio_sky_sensors
-#else
-#define CMD_CONF_HANDLERS slip_radio_cmd_handler
-#endif
-
-
-/* configuration for the slipradio/network driver */
-#undef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     nullmac_driver
-
-#undef NETSTACK_CONF_RDC
-/* #define NETSTACK_CONF_RDC     nullrdc_noframer_driver */
-#define NETSTACK_CONF_RDC     contikimac_driver
-
-#undef NETSTACK_CONF_NETWORK
-#define NETSTACK_CONF_NETWORK slipnet_driver
-
-#undef NETSTACK_CONF_FRAMER
-#define NETSTACK_CONF_FRAMER no_framer
-
-#undef CC2420_CONF_AUTOACK
-#define CC2420_CONF_AUTOACK              1
-
-#undef UART1_CONF_RX_WITH_DMA
-#define UART1_CONF_RX_WITH_DMA           1
-
-#endif /* __PROJECT_CONF_H__ */
+#endif /* __BORDER_ROUTER_H__ */

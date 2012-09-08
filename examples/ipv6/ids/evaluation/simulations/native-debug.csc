@@ -328,37 +328,6 @@
     <location_y>135</location_y>
   </plugin>
   <plugin>
-    se.sics.cooja.plugins.TimeLine
-    <plugin_config>
-      <mote>0</mote>
-      <mote>1</mote>
-      <mote>2</mote>
-      <mote>3</mote>
-      <mote>4</mote>
-      <mote>5</mote>
-      <mote>6</mote>
-      <mote>7</mote>
-      <mote>8</mote>
-      <mote>9</mote>
-      <mote>10</mote>
-      <mote>11</mote>
-      <mote>12</mote>
-      <mote>13</mote>
-      <mote>14</mote>
-      <mote>15</mote>
-      <showRadioRXTX />
-      <showRadioHW />
-      <showLEDs />
-      <split>-1</split>
-      <zoomfactor>500.0</zoomfactor>
-    </plugin_config>
-    <width>1366</width>
-    <z>2</z>
-    <height>166</height>
-    <location_x>0</location_x>
-    <location_y>559</location_y>
-  </plugin>
-  <plugin>
     SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
@@ -368,16 +337,16 @@
     <location_y>419</location_y>
   </plugin>
   <plugin>
-    se.sics.cooja.plugins.RadioLogger
+    se.sics.cooja.plugins.ScriptRunner
     <plugin_config>
-      <split>339</split>
-      <analyzers name="6lowpan" />
+      <scriptfile>[CONTIKI_DIR]/examples/ipv6/ids/evaluation/simulations/run_simulation.js</scriptfile>
+      <active>true</active>
     </plugin_config>
-    <width>969</width>
-    <z>3</z>
-    <height>522</height>
-    <location_x>53</location_x>
-    <location_y>128</location_y>
+    <width>596</width>
+    <z>1</z>
+    <height>725</height>
+    <location_x>591</location_x>
+    <location_y>225</location_y>
   </plugin>
 </simconf>
 

@@ -279,7 +279,8 @@ print_subtree(struct Node *node, int depth)
   printf("}\n");
 
   for(i = 0; i < node->neighbors; ++i) {
-    if(uip_ipaddr_cmp(node->neighbor[i].node->parent->ip, node->ip))
+    if(node->neighbor[i].node->parent != NULL &&
+            uip_ipaddr_cmp(node->neighbor[i].node->parent->ip, node->ip))
       print_subtree(node->neighbor[i].node, depth + 1);
   }
 }
@@ -698,6 +699,11 @@ PROCESS_THREAD(mapper, ev, data)
 
   etimer_set(&host_timer, MAPPING_HOST_INTERVAL); // Wake up and send the next information request
   etimer_set(&map_timer, MAPPING_INTERVAL); // Restart network mapping
+
+  // Wait till we got an adress before starting the mapping
+  while (uip_ds6_get_global(ADDR_PREFERRED) == NULL) {
+      PROCESS_YIELD();
+  }
 
   // Add this node (root node) to the network graph
   network[0].ip = &uip_ds6_get_global(ADDR_PREFERRED)->ipaddr;

@@ -1009,5 +1009,14 @@
     <location_x>591</location_x>
     <location_y>225</location_y>
   </plugin>
+  <plugin>
+    SerialSocketServer
+    <mote_arg>0</mote_arg>
+    <width>422</width>
+    <z>0</z>
+    <height>69</height>
+    <location_x>101</location_x>
+    <location_y>437</location_y>
+  </plugin>
 </simconf>
 

@@ -42,7 +42,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/uip-debug.h"
 
 #define INCONSISTENCY_THREASHOLD 2
@@ -268,7 +268,7 @@ print_subtree(struct Node *node, int depth)
   }
   node->visited = 1;
 
-  printf(" (t: %d, p: %x, r: %d) ", node->timestamp, node->parent->id, node->rank);
+  printf(" (t: %d, p: %x, r: %d) ", node->timestamp, node->parent_id, node->rank);
 
   printf("    {");
 

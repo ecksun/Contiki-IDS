@@ -39,7 +39,7 @@ echo "Found cooja.jar in $COOJA"
 cd $COOJA
 for i in $(seq 1 $RUNS); do
     java -mx512m -jar ../dist/cooja.jar -nogui=$SIMULATION > /dev/null & 
-    sleep 5
+    sleep 10
     sudo $CURRENT/$BORDER_ROUTER -a 127.0.0.1 aaaa::1/64
     wait
     mv COOJA.log $CURRENT/$simname-$i.log

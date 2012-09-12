@@ -42,6 +42,9 @@ for i in $(seq 1 $RUNS); do
     sleep 10
     sudo $CURRENT/$BORDER_ROUTER -a 127.0.0.1 aaaa::1/64
     wait
+    git log --pretty=oneline -n 1 > $CURRENT/$simname-$i.gitlog
+    echo >> $CURRENT/$simname-$i.gitlog
+    git status >> $CURRENT/$simname-$i.gitlog
     mv COOJA.log $CURRENT/$simname-$i.log
     mv COOJA.testlog $CURRENT/$simname-$i.testlog
 done

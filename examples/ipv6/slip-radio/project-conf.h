@@ -31,6 +31,7 @@
 #define __PROJECT_CONF_H__
 
 #define CSMA_CONF_MAX_NEIGHBOR_QUEUES 4
+#define NETSTACK_CONF_RDC nullrdc_driver
 
 #undef QUEUEBUF_CONF_NUM
 #define QUEUEBUF_CONF_NUM          4

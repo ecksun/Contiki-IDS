@@ -1,2 +1,5 @@
 #undef UIP_CONF_UDP_CHECKSUMS
 #define UIP_CONF_UDP_CHECKSUMS 0
+
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC nullrdc_driver

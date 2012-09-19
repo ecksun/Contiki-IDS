@@ -1,5 +1,5 @@
 CONTIKI = ../../../../..
-APPS = powertrace collect-view ids-client
+APPS = powertrace collect-view
 CONTIKI_PROJECT = udp-sender udp-sink
 PROJECT_SOURCEFILES += collect-common.c
 

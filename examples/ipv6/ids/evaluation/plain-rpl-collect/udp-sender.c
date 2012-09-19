@@ -33,7 +33,6 @@
 #include "net/uip-udp-packet.h"
 #include "net/neighbor-info.h"
 #include "net/rpl/rpl.h"
-
 #include "powertrace.h"
 #include "collect-common.h"
 #include "collect-view.h"
@@ -47,14 +46,12 @@
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
-// #include "mapper-client.h"
-
 static struct uip_udp_conn *client_conn;
 static uip_ipaddr_t server_ipaddr;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client process");
-AUTOSTART_PROCESSES(&udp_client_process, &collect_common_process); //, &mapper_client);
+AUTOSTART_PROCESSES(&udp_client_process, &collect_common_process);
 /*---------------------------------------------------------------------------*/
 void
 collect_common_set_sink(void)

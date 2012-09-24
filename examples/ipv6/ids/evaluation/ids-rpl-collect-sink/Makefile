@@ -11,6 +11,8 @@ ifdef PERIOD
 CFLAGS=-DPERIOD=$(PERIOD)
 endif
 
+CFLAGS += -DPROJECT_CONF_H=\"../project-conf.h\"
+
 all: $(CONTIKI_PROJECT)
 
 include $(CONTIKI)/Makefile.include

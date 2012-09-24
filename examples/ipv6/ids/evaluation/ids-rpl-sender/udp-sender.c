@@ -58,6 +58,8 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
   PRINTF("UDP client process started\n");
 
+  NETSTACK_RDC.off(1);
+
   while(1) {
     PROCESS_YIELD();
   }

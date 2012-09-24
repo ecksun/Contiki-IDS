@@ -42,7 +42,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
 #define INCONSISTENCY_THREASHOLD 2
@@ -686,8 +686,8 @@ PROCESS_THREAD(mapper, ev, data)
   memset(host, 0, sizeof(host));
   memset(network, 0, sizeof(network));
 
-  PRINTF("IDS Server, compile time: %s\n", __TIME__);
-  PRINTF("Mapping interval is %lu, hosts will be mapped with a %lu second delay\n", MAPPING_INTERVAL / CLOCK_SECOND, MAPPING_HOST_INTERVAL / CLOCK_SECOND);
+  printf("IDS Server, compile time: %s\n", __TIME__);
+  printf("Mapping interval is %lu, hosts will be mapped with a %lu second delay\n", MAPPING_INTERVAL / CLOCK_SECOND, MAPPING_HOST_INTERVAL / CLOCK_SECOND);
 
   ids_conn = udp_new(NULL, UIP_HTONS(MAPPER_CLIENT_PORT), NULL);
   udp_bind(ids_conn, UIP_HTONS(MAPPER_SERVER_PORT));

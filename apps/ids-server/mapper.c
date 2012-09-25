@@ -733,7 +733,9 @@ PROCESS_THREAD(mapper, ev, data)
           if(instance_table[mapper_instance].used == 0)
             continue;
           for(; mapper_dag < RPL_MAX_DAG_PER_INSTANCE; ++mapper_dag) {
-            if(!instance_table[mapper_instance].dag_table[mapper_dag].used)
+            if(!instance_table[mapper_instance].dag_table[mapper_dag].used ||
+                    compress_ipaddr_t(&instance_table[mapper_instance].dag_table[mapper_dag].dag_id)
+                    >= 256)
               continue;
             network[0].rank = instance_table[mapper_instance].min_hoprankinc;
 

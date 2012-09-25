@@ -84,8 +84,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-36.63161808135905</x>
-        <y>27.438039428159527</y>
+        <x>71.59027497792736</x>
+        <y>81.82914550180207</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -98,8 +98,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>18.029100489211658</x>
-        <y>49.54110186644685</y>
+        <x>74.81896563271327</x>
+        <y>89.85832172368184</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -112,8 +112,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>13.465251751496723</x>
-        <y>-17.87477902469471</y>
+        <x>64.0805371750509</x>
+        <y>12.349886148103561</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -126,8 +126,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-20.118197992730035</x>
-        <y>-8.043093420489122</y>
+        <x>28.908148007111855</x>
+        <y>18.51690802822362</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -140,8 +140,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-47.59294450790051</x>
-        <y>-24.939536503093386</y>
+        <x>48.56719847385123</x>
+        <y>93.31071258134723</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -154,8 +154,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-46.05002184416303</x>
-        <y>20.28104034093097</y>
+        <x>7.336040635778618</x>
+        <y>36.99797411189634</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -168,8 +168,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-39.88211496129742</x>
-        <y>35.61838215316162</y>
+        <x>9.02990749339272</x>
+        <y>48.4734608847635</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -182,8 +182,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>0.9349830444110627</x>
-        <y>24.432993953563166</y>
+        <x>47.75062306320028</x>
+        <y>46.487088136999645</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -196,8 +196,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>43.52506623919648</x>
-        <y>-19.977069296846228</y>
+        <x>20.842585599933262</x>
+        <y>96.96362863094089</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -210,8 +210,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>33.25460581955855</x>
-        <y>17.289086384748103</y>
+        <x>49.901887741756966</x>
+        <y>17.63553983051719</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -224,8 +224,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-19.858203677816345</x>
-        <y>24.11544117672922</y>
+        <x>42.9060861756971</x>
+        <y>58.88035150209734</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -238,8 +238,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>21.75720812953105</x>
-        <y>-43.07515973118381</y>
+        <x>32.243474848024015</x>
+        <y>29.4489979977431</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -252,8 +252,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>31.400734805610625</x>
-        <y>4.274754378165632</y>
+        <x>11.896707070702583</x>
+        <y>59.0140622921829</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -266,8 +266,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-7.015025537813303</x>
-        <y>28.260775863523044</y>
+        <x>30.769903457368784</x>
+        <y>50.36811738585515</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -280,8 +280,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>-31.629774095150577</x>
-        <y>-30.036317674035573</y>
+        <x>97.79007305530006</x>
+        <y>38.848976607959216</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -294,7 +294,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>280</width>
-    <z>3</z>
+    <z>2</z>
     <height>160</height>
     <location_x>400</location_x>
     <location_y>0</location_y>
@@ -306,10 +306,10 @@
       <skin>se.sics.cooja.plugins.skins.GridVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.TrafficVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
-      <viewport>1.6409394285905357 0.0 0.0 1.6409394285905357 200.67599655921646 171.50715015405265</viewport>
+      <viewport>3.2439530057467723 0.0 0.0 3.2439530057467723 35.38679929003147 15.727272727272757</viewport>
     </plugin_config>
     <width>400</width>
-    <z>2</z>
+    <z>1</z>
     <height>400</height>
     <location_x>1</location_x>
     <location_y>1</location_y>
@@ -320,7 +320,7 @@
       <filter />
     </plugin_config>
     <width>966</width>
-    <z>5</z>
+    <z>4</z>
     <height>240</height>
     <location_x>400</location_x>
     <location_y>160</location_y>
@@ -332,7 +332,7 @@
       <active>true</active>
     </plugin_config>
     <width>596</width>
-    <z>4</z>
+    <z>3</z>
     <height>725</height>
     <location_x>591</location_x>
     <location_y>225</location_y>
@@ -341,7 +341,7 @@
     SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
-    <z>1</z>
+    <z>0</z>
     <height>69</height>
     <location_x>101</location_x>
     <location_y>437</location_y>

@@ -555,15 +555,6 @@ tcpip_ipv6_output(void)
     uip_len = 0;
     return;
   }
-  if (!uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr)) {
-    printf("Dropping package from ");
-    uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
-    printf(" heading to ");
-    uip_debug_ipaddr_print(&UIP_IP_BUF->destipaddr);
-    printf("\n");
-    return;
-  }
-
 
   if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Next hop determination */

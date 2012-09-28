@@ -40,7 +40,7 @@ cd $COOJA
 for i in $(seq 1 $RUNS); do
     java -mx512m -jar ../dist/cooja.jar -nogui=$SIMULATION > $CURRENT/$simname-$i.coojalog &
     sleep 10
-    sudo $CURRENT/$BORDER_ROUTER -a 127.0.0.1 aaaa::1/64
+    sudo $CURRENT/$BORDER_ROUTER -a 127.0.0.1 aaaa::1/64 | ts > $CURRENT/$simname-$i.brlog
     wait
     git log --pretty=oneline -n 1 > $CURRENT/$simname-$i.gitlog
     echo >> $CURRENT/$simname-$i.gitlog

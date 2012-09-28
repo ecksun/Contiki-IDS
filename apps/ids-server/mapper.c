@@ -668,7 +668,7 @@ int detect_correct_rank_inconsistencies(void) {
 void
 detect_inconsistencies()
 {
-  detect_correct_rank_inconsistencies();
+  // detect_correct_rank_inconsistencies();
   check_child_parent_relation();
   missing_ids_info();
 }

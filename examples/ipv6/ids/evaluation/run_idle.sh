@@ -31,7 +31,7 @@ echo "Found cooja.jar in $COOJA"
 
 cd $COOJA
 for i in $(seq 1 $RUNS); do
-    java -mx512m -jar ../dist/cooja.jar -nogui=$SIMULATION | ts > $CURRENT/$simname-$i.brlog &
+    java -mx512m -jar ../dist/cooja.jar -nogui=$SIMULATION > $CURRENT/$simname-$i.brlog &
     wait
     git log --pretty=oneline -n 1 > $CURRENT/$simname-$i.gitlog
     echo >> $CURRENT/$simname-$i.gitlog

@@ -7,6 +7,9 @@
 #define MAPPER_CLIENT_PORT 4713
 #define MAPPER_SERVER_PORT 4714
 
+#define FW_CONF_CLIENT_PORT 4800
+#define FW_CONF_SERVER_PORT 4801
+
 #include "net/uip.h"
 
 /**

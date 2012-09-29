@@ -49,6 +49,10 @@
 
 #include <string.h>
 
+#ifdef CONF_FIREWALL
+#include "net/firewall.h"
+#endif
+
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
@@ -181,6 +185,10 @@ check_for_tcp_syn(void)
 static void
 packet_input(void)
 {
+#ifdef CONF_FIREWALL
+  if (!firewall_valid_packet())
+    return;
+#endif
 #if UIP_CONF_IP_FORWARD
   if(uip_len > 0) {
     tcpip_is_forwarding = 1;
@@ -749,6 +757,7 @@ PROCESS_THREAD(tcpip_process, ev, data)
  }
 #endif
 
+
   tcpip_event = process_alloc_event();
 #if UIP_CONF_ICMP6
   tcpip_icmp6_event = process_alloc_event();
@@ -763,6 +772,10 @@ PROCESS_THREAD(tcpip_process, ev, data)
 #if UIP_CONF_IPV6_RPL
   rpl_init();
 #endif /* UIP_CONF_IPV6_RPL */
+
+#ifdef CONF_FIREWALL
+ firewall_init();
+#endif
 
   while(1) {
     PROCESS_YIELD();

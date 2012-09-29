@@ -1,0 +1,4 @@
+firewall-client_src = firewall-client.c
+
+APPS += ids-common
+include $(CONTIKI)/apps/ids-common/Makefile.ids-common

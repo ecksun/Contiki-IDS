@@ -38,6 +38,7 @@ echo "Found cooja.jar in $COOJA"
 
 cd $COOJA
 for i in $(seq 1 $RUNS); do
+    sed -i "s/<randomseed>[0-9]\+/<randomseed>$RANDOM/" $SIMULATION
     java -mx512m -jar ../dist/cooja.jar -nogui=$SIMULATION > $CURRENT/$simname-$i.coojalog &
     sleep 10
     sudo $CURRENT/$BORDER_ROUTER -a 127.0.0.1 aaaa::1/64 | ts > $CURRENT/$simname-$i.brlog

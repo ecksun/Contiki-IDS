@@ -12,8 +12,8 @@
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       se.sics.cooja.radiomediums.UDGM
-      <transmitting_range>70.0</transmitting_range>
-      <interference_range>90.0</interference_range>
+      <transmitting_range>50.0</transmitting_range>
+      <interference_range>60.0</interference_range>
       <success_ratio_tx>1.0</success_ratio_tx>
       <success_ratio_rx>0.0</success_ratio_rx>
     </radiomedium>
@@ -24,9 +24,9 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
       <description>Border-router (slip-radio)</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/slip-radio/slip-radio.c</source>
-      <commands EXPORT="discard">make slip-radio.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/slip-radio/slip-radio.sky</firmware>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/ipv6/ids/evaluation/ids-sink/udp-sink.c</source>
+      <commands EXPORT="discard">make udp-sink.sky TARGET=sky</commands>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/ipv6/ids/evaluation/ids-sink/udp-sink.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>
@@ -107,8 +107,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>47.87599648027881</x>
-        <y>27.654913909496276</y>
+        <x>39.62169169871099</x>
+        <y>48.12449383218124</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -121,8 +121,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>69.12096372929106</x>
-        <y>5.736793521630323</y>
+        <x>74.91459540569078</x>
+        <y>10.20186491077978</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -135,8 +135,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>4.991500961925542</x>
-        <y>53.48592582990789</y>
+        <x>32.25396254178832</x>
+        <y>4.993099396973949</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -149,8 +149,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>59.31932142838631</x>
-        <y>26.529650082496893</y>
+        <x>55.09082241531657</x>
+        <y>62.518860344216016</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -163,8 +163,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>37.462382903623606</x>
-        <y>78.88376102791189</y>
+        <x>67.15443247259729</x>
+        <y>90.92696796594679</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -177,8 +177,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>82.20952069160394</x>
-        <y>25.387681713780896</y>
+        <x>58.55971252268795</x>
+        <y>25.22829168997367</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -191,8 +191,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>10.748853488167542</x>
-        <y>74.91702286894296</y>
+        <x>12.88599277563144</x>
+        <y>71.48015978825875</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>

@@ -12,8 +12,8 @@
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       se.sics.cooja.radiomediums.UDGM
-      <transmitting_range>70.0</transmitting_range>
-      <interference_range>90.0</interference_range>
+      <transmitting_range>50.0</transmitting_range>
+      <interference_range>60.0</interference_range>
       <success_ratio_tx>1.0</success_ratio_tx>
       <success_ratio_rx>0.0</success_ratio_rx>
     </radiomedium>
@@ -205,8 +205,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>87.00865963942334</x>
-        <y>35.25540252747312</y>
+        <x>66.80536848220298</x>
+        <y>37.53709173714882</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -275,8 +275,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>39.66617478862548</x>
-        <y>26.48009202114806</y>
+        <x>45.490058277479825</x>
+        <y>34.79655185368441</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -303,8 +303,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>24.81842088464159</x>
-        <y>83.81133071687906</y>
+        <x>30.264836702677577</x>
+        <y>76.20915453714653</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>

@@ -719,7 +719,9 @@ PROCESS_THREAD(mapper, ev, data)
 
       // Map the next DAG.
       if(working_host == 0 && etimer_expired(&host_timer)) {
+#if (DEBUG) & DEBUG_PRINT
         print_graph();
+#endif
         if (init == 0)
           detect_inconsistencies();
         init = 0;

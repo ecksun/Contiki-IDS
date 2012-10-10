@@ -704,8 +704,10 @@ PROCESS_THREAD(mapper, ev, data)
 
   etimer_set(&tmp_timer, CLOCK_SECOND); // Wake up and send the next information request
 
+  printf("waiting for IP\n");
   // Wait till we got an adress before starting the mapping
   while (uip_ds6_get_global(ADDR_PREFERRED) == NULL) {
+      printf("still waiting\n");
       etimer_restart(&tmp_timer);
       PROCESS_YIELD();
   }
@@ -718,7 +720,7 @@ PROCESS_THREAD(mapper, ev, data)
   etimer_set(&host_timer, MAPPING_HOST_INTERVAL); // Wake up and send the next information request
   etimer_set(&map_timer, MAPPING_INTERVAL); // Restart network mapping
   while(1) {
-    PRINTF("snurrar\n");
+    printf("snurrar\n");
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       tcpip_handler();

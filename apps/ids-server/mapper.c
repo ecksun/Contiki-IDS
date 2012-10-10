@@ -101,6 +101,11 @@ static struct etimer map_timer;
 static struct etimer host_timer;
 
 /**
+ * Temporary timer to keep things alive
+ */
+static struct etimer tmp_timer;
+
+/**
  * A temporary variable to ease workflow
  */
 static uip_ipaddr_t tmp_ip;
@@ -697,11 +702,11 @@ PROCESS_THREAD(mapper, ev, data)
   PRINTF(" local/remote port %u/%u\n", UIP_HTONS(ids_conn->lport),
          UIP_HTONS(ids_conn->rport));
 
-  etimer_set(&host_timer, MAPPING_HOST_INTERVAL); // Wake up and send the next information request
-  etimer_set(&map_timer, MAPPING_INTERVAL); // Restart network mapping
+  etimer_set(&tmp_timer, CLOCK_SECOND); // Wake up and send the next information request
 
   // Wait till we got an adress before starting the mapping
   while (uip_ds6_get_global(ADDR_PREFERRED) == NULL) {
+      etimer_restart(&tmp_timer);
       PROCESS_YIELD();
   }
 
@@ -710,6 +715,8 @@ PROCESS_THREAD(mapper, ev, data)
   network[0].id = compress_ipaddr_t(network[0].ip);
   ++node_index;
 
+  etimer_set(&host_timer, MAPPING_HOST_INTERVAL); // Wake up and send the next information request
+  etimer_set(&map_timer, MAPPING_INTERVAL); // Restart network mapping
   while(1) {
     PRINTF("snurrar\n");
     PROCESS_YIELD();

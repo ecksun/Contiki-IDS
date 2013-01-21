@@ -15,6 +15,13 @@
 extern uip_ds6_route_t uip_ds6_routing_table[];
 extern uip_ds6_defrt_t uip_ds6_defrt_list[];
 
+/**
+ * This method indicates a packet is lost when sending to the specified
+ * destination.
+ * 
+ * It will slightly alter the routing metric for the parent used for that path
+ * in order to, over time, stop using the parent in question.
+ */
 void packet_lost(uip_ipaddr_t * dest) {
   PRINTF("Packet lost on route to");
   PRINT6ADDR(dest);

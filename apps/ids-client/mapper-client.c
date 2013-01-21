@@ -39,8 +39,10 @@ tcpip_handler(void)
     MAPPER_GET_PACKETDATA(version, in_data);
     MAPPER_GET_PACKETDATA(timestamp, in_data);
 
+    // Go through all RPL instances
     for (i = 0; i < RPL_MAX_INSTANCES; ++i) {
       if (instance_table[i].used && instance_table[i].instance_id == instance_id) {
+        // And all their DAGs
         for (j = 0; j < RPL_MAX_DAG_PER_INSTANCE; ++j) {
           if (instance_table[i].dag_table[j].used &&
               compress_ipaddr_t(&instance_table[i].dag_table[j].dag_id) ==
@@ -78,12 +80,12 @@ tcpip_handler(void)
             myip = &uip_ds6_get_link_local(ADDR_PREFERRED)->ipaddr;
             if (myip == NULL) // We have no interface to use
               return;
+
             // My IP adress
             tmp_id = compress_ipaddr_t(myip);
             MAPPER_ADD_PACKETDATA(out_data_p, tmp_id);
 
             // RPL Instance ID | DODAG ID | DODAG Version Number | Timestamp
-
             MAPPER_ADD_PACKETDATA(out_data_p, instance_id);
             MAPPER_ADD_PACKETDATA(out_data_p, dag_id);
             MAPPER_ADD_PACKETDATA(out_data_p, version);
@@ -127,7 +129,6 @@ tcpip_handler(void)
         break;
       }
     }
-
     /* Ignore incoming data */
   }
 }

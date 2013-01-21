@@ -62,7 +62,7 @@ static struct uip_udp_conn *ids_conn;
 static int working_host = 0;
 
 /**
- * A timestamp to make sure mapping information recieved is recent.
+ * A timestamp to make sure mapping information received is recent.
  */
 static uint8_t timestamp = MAPPING_RECENT_WINDOW;
 
@@ -101,7 +101,7 @@ static struct etimer map_timer;
 static struct etimer host_timer;
 
 /**
- * A temporary variable to ease workflow
+ * A temporary variable to ease work flow
  */
 static uip_ipaddr_t tmp_ip;
 
@@ -129,7 +129,7 @@ struct Neighbor {
  */
 struct Node {
   /**
-   * IP adress of this node
+   * IP address of this node
    */
   uip_ipaddr_t *ip;
 
@@ -139,7 +139,7 @@ struct Node {
   uint16_t id;
 
   /**
-   * Timestamp of last recieved information update
+   * Timestamp of last received information update
    */
   uint8_t timestamp;
 
@@ -208,15 +208,15 @@ find_node(uint16_t id)
  * Add a new node to the network graph based on the compressed IP
  *
  * If the node already exists in the network no new node will be added and a
- * pointer to that adress will be returned
+ * pointer to that address will be returned
  *
  * This function will go through the routing table and add a pointer to the IP
  * in the routing table, in order to save memory.
  *
  * The function will return NULL if either we ran out of memory or if we
- * couldnt find the IP-adress in our routing table.
+ * couldn't find the IP-address in our routing table.
  *
- * @return A pointer to the new node or NULL if an error occured.
+ * @return A pointer to the new node or NULL if an error occurred.
  */
 struct Node *
 add_node(uint16_t id)
@@ -253,6 +253,11 @@ add_node(uint16_t id)
   return NULL;
 }
 
+/**
+ * Utility method to print the subtree rooted in the given Node. The depth
+ * parameter indicates the current depth and is used to add the proper
+ * indentation level.
+ */
 void
 print_subtree(struct Node *node, int depth)
 {
@@ -285,6 +290,9 @@ print_subtree(struct Node *node, int depth)
   }
 }
 
+/**
+ * Print the entire network graph
+ */
 void
 print_graph()
 {
@@ -341,7 +349,7 @@ tcpip_handler()
   MAPPER_GET_PACKETDATA(dag_id, appdata);
 
   if (dag_id != compress_ipaddr_t(&current_dag->dag_id)) {
-    PRINTF("Mapping information recieved which does not match our current");
+    PRINTF("Mapping information received which does not match our current");
     PRINTF("DODAG, information ignored (got %x while expecting %x)\n", dag_id,
         compress_ipaddr_t(&current_dag->dag_id));
     return;
@@ -395,7 +403,7 @@ tcpip_handler()
 }
 
 /**
- * Check a timestamp to se if it is to old or not
+ * Check a timestamp to see if it is to old or not
  *
  * This function takes into account over and underflows.
  */
@@ -523,7 +531,7 @@ check_child_parent_relation()
       network[i].status &= ~IDS_TEMP_ERROR;
     }
     else {
-      // Reset if we didnt see a repeat offence
+      // Reset if we didn't see a repeat offence
       network[i].status &= ~IDS_RELATIVE_ERROR;
     }
   }
@@ -547,7 +555,7 @@ missing_ids_info()
   for (i = 0; i < node_index; ++i) {
     if (!valid_node(&network[i])) {
       if (status == 0)
-        printf("The following list of nodes either have outdated or non-exsistent information: \n");
+        printf("The following list of nodes either have outdated or non-existent information: \n");
       uip_debug_ipaddr_print(network[i].ip);
       printf("\n");
 
@@ -558,26 +566,30 @@ missing_ids_info()
   return status;
 }
 
+/**
+ * Correct rank inconsistencies by using the RANK most often reported for a
+ * node.
+ */
 int correct_rank_inconsistencies(void) {
   int i,j,k;
   int inconsistencies = 0;
 
   // We will use the visited status variable to count the number of
-  // missbehaviours that have occured for a certain node
+  // misbehaviours that have occurred for a certain node
   for (i = 0; i < node_index; ++i)
     network[i].visited = 0;
 
   // We do not care about the roots neighboring ranks, if the node is lying
   // about its rank to the root it is off little use to check the validity of
-  // it as its claimd rank will correspond to the rank it is reporting.
+  // it as its claimed rank will correspond to the rank it is reporting.
 
   for (i = 1; i < node_index; ++i) {
-    // If we havent gotten any information for this node, ignore it
+    // If we haven't gotten any information for this node, ignore it
     if (!valid_node(&network[i]))
       continue;
 
     for (j = 0; j < network[i].neighbors; ++j) {
-      // If we havent gotten any information from this neighbor, ignore it
+      // If we haven't gotten any information from this neighbor, ignore it
       if (!valid_node(network[i].neighbor[j].node) ||
           network[i].neighbor[j].node == &network[0])
         continue;
@@ -643,6 +655,14 @@ int correct_rank_inconsistencies(void) {
   return inconsistencies;
 }
 
+/**
+ * Detect and correct for rank inconsistencies and promote the inconsistencies
+ * if they are persistent over several consecutive mapping intervals.
+ *
+ * The first time an inconsistency is detected the flag IDS_TEMP_ERROR will be
+ * set, the second time the flag IDS_RANK_ERROR will be set, indicating an
+ * actual error, instead of ordinary fluctuations which can occur.
+ */
 int detect_correct_rank_inconsistencies(void) {
   int status = 0;
   int i;
@@ -655,7 +675,7 @@ int detect_correct_rank_inconsistencies(void) {
       network[i].status &= ~IDS_TEMP_ERROR;
     }
     else {
-      // Reset if we didnt see a repeat offence
+      // Reset if we didn't see a repeat offence
       network[i].status &= ~IDS_RANK_ERROR;
     }
   }
@@ -700,7 +720,7 @@ PROCESS_THREAD(mapper, ev, data)
   etimer_set(&host_timer, MAPPING_HOST_INTERVAL); // Wake up and send the next information request
   etimer_set(&map_timer, MAPPING_INTERVAL); // Restart network mapping
 
-  // Wait till we got an adress before starting the mapping
+  // Wait till we got an address before starting the mapping
   while (uip_ds6_get_global(ADDR_PREFERRED) == NULL) {
       PROCESS_YIELD();
   }
@@ -711,7 +731,6 @@ PROCESS_THREAD(mapper, ev, data)
   ++node_index;
 
   while(1) {
-    PRINTF("snurrar\n");
     PROCESS_YIELD();
     if(ev == tcpip_event) {
       tcpip_handler();

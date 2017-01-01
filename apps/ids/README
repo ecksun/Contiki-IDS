@@ -1,0 +1,2 @@
+You probably want to increase the number of queues in order to be able to map a
+larger network, do that by defining CSMA_CONF_MAX_NEIGHBOR_QUEUES.

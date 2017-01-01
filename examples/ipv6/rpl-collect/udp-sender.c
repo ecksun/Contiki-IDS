@@ -33,12 +33,8 @@
 #include "net/uip-udp-packet.h"
 #include "net/neighbor-info.h"
 #include "net/rpl/rpl.h"
-#include "dev/serial-line.h"
-#if CONTIKI_TARGET_Z1
-#include "dev/uart0.h"
-#else
-#include "dev/uart1.h"
-#endif
+
+#include "mapper-client.h"
 #include "collect-common.h"
 #include "collect-view.h"
 
@@ -56,7 +52,7 @@ static uip_ipaddr_t server_ipaddr;
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client process");
-AUTOSTART_PROCESSES(&udp_client_process, &collect_common_process);
+AUTOSTART_PROCESSES(&udp_client_process, &collect_common_process, &mapper_client);
 /*---------------------------------------------------------------------------*/
 void
 collect_common_set_sink(void)
@@ -164,12 +160,6 @@ collect_common_send(void)
 void
 collect_common_net_init(void)
 {
-#if CONTIKI_TARGET_Z1
-  uart0_set_input(serial_line_input_byte);
-#else
-  uart1_set_input(serial_line_input_byte);
-#endif
-  serial_line_init();
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -215,7 +205,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
   set_global_address();
 
-  PRINTF("UDP client process started\n");
+  PRINTF("UDP evil client process started\n");
 
   print_local_addresses();
 

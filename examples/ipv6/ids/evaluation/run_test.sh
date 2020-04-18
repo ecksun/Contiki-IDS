@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "$1" -o -z "$2" -o -z "$3" ]; then
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
     echo "To few arguments"
     echo "Usage: ./run_test.sh 5 simname simulation.csc"
     exit
@@ -17,7 +17,7 @@ if [ -z "$BORDER_ROUTER" ]; then
 fi
 
 DIR="."
-while [ true ]; do
+while true; do
     COOJA=$(find $DIR -name cooja.jar)
 
     if [ -n "$COOJA" ]; then
@@ -26,7 +26,7 @@ while [ true ]; do
     DIR="$DIR/.."
 done
 
-COOJA=$(dirname $COOJA)
+COOJA=$(dirname "$COOJA")
 
 SIMULATION=$CURRENT/$3
 
@@ -36,12 +36,12 @@ RUNS=$1
 
 echo "Found cooja.jar in $COOJA"
 
-cd $COOJA
-for i in $(seq 1 $RUNS); do
-    java -mx512m -jar ../dist/cooja.jar -nogui=$SIMULATION > /dev/null & 
+cd "$COOJA" || { echo >&2 "Failed to cd into $COOJA"; exit 1 }
+for i in $(seq 1 "$RUNS"); do
+    java -mx512m -jar ../dist/cooja.jar -nogui="$SIMULATION" > /dev/null & 
     sleep 5
-    sudo $CURRENT/$BORDER_ROUTER -a 127.0.0.1 aaaa::1/64
+    sudo "$CURRENT/$BORDER_ROUTER" -a 127.0.0.1 aaaa::1/64
     wait
-    mv COOJA.log $CURRENT/$simname-$i.log
-    mv COOJA.testlog $CURRENT/$simname-$i.testlog
+    mv COOJA.log "$CURRENT/$simname-$i.log"
+    mv COOJA.testlog "$CURRENT/$simname-$i.testlog"
 done

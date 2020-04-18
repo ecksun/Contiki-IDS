@@ -1,8 +1,18 @@
 #!/bin/bash
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-    echo "To few arguments"
-    echo "Usage: ./run_test.sh 5 simname simulation.csc"
+    cat << EOF
+To few arguments
+
+Usage: ./run_test.sh RUNS SIMULATION-NAME SIMULATION-FILE
+
+RUNS define how many times to run the same simulation
+SIMULATION-NAME is simply the name of the output files
+SIMULATION-FILE is the simulation that will be run, probably a .csc file
+
+Example usage:
+./$0 5 first-simulation ./evaluation/idle-tree-sparse-lossy.csc
+EOF
     exit
 fi
 
